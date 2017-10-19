@@ -59,6 +59,7 @@ class AccountInvoice(models.Model):
             'origin': self.number,
             'rc_purchase_invoice_id': self.id,
             'name': rc_type.self_invoice_text,
+            'fiscal_position_id': None
             }
 
     def get_inv_line_to_reconcile(self):
@@ -313,7 +314,8 @@ class AccountInvoice(models.Model):
         res = super(AccountInvoice, self).invoice_validate()
         fp = self.fiscal_position_id
         rc_type = fp and fp.rc_type_id
-        if rc_type and rc_type.method == 'selfinvoice':
+        if rc_type and rc_type.method == 'selfinvoice'\
+                and self.amount_total:
             if not rc_type.with_supplier_self_invoice:
                 self.generate_self_invoice()
             else:
