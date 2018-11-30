@@ -22,7 +22,7 @@ class WizardImportFatturapa(models.TransientModel):
         # ('1', 'Aliquote'),
         ('2', 'Maximum'),
     ], string="E-bills Detail Level",
-        help="Minumum level: Bill is created with no lines; "
+        help="Minimum level: Bill is created with no lines; "
              "User will have to create them, according to what specified in "
              "the electronic bill.\n"
              # "Livello Aliquote: viene creata una riga fattura per ogni "
@@ -1139,12 +1139,12 @@ class WizardImportFatturapa(models.TransientModel):
                 cond = PaymentLine.CondizioniPagamento or False
                 if not cond:
                     raise UserError(
-                        _('Payment method Code not found in document')
+                        _('Payment method code not found in document')
                     )
                 terms = PaymentTermsModel.search([('code', '=', cond)])
                 if not terms:
                     raise UserError(
-                        _('Payment method Code %s is incorrect') % cond
+                        _('Payment method code %s is incorrect') % cond
                     )
                 else:
                     term_id = terms[0].id
@@ -1206,7 +1206,7 @@ class WizardImportFatturapa(models.TransientModel):
                 invoice.amount_total-ImportoTotaleDocumento, precision_digits=2
             ):
                 self.log_inconsistency(
-                    _('Invoice total %s is different from '
+                    _('Bill total %s is different from '
                       'document total amount %s')
                     % (invoice.amount_total, ImportoTotaleDocumento)
                 )
