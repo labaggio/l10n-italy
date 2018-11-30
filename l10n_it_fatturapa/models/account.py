@@ -59,7 +59,7 @@ class FatturapaPaymentDetail(models.Model):
     )
     payment_term_start = fields.Date('Payment Term Start')
     payment_days = fields.Integer('Payment Term Days')
-    payment_due_date = fields.Date('Payment due Date')
+    payment_due_date = fields.Date('Payment Due Date')
     payment_amount = fields.Float('Payment Amount')
     post_office_code = fields.Char('Post Office Code', size=20)
     recepit_name = fields.Char("Receipt Issuer Name")
@@ -74,14 +74,14 @@ class FatturapaPaymentDetail(models.Model):
     payment_bank = fields.Many2one(
         'res.partner.bank', string="Payment Bank")
     prepayment_discount = fields.Float('Prepayment Discount')
-    max_payment_date = fields.Date('Maximum date for Payment')
+    max_payment_date = fields.Date('Maximum Date for Payment')
     penalty_amount = fields.Float('Amount of Penality')
-    penalty_date = fields.Date('Effective date of Penality')
-    payment_code = fields.Char('Payment code')
+    penalty_date = fields.Date('Effective Date of Penality')
+    payment_code = fields.Char('Payment Code')
     account_move_line_id = fields.Many2one(
         'account.move.line', string="Payment Line")
     payment_data_id = fields.Many2one(
-        'fatturapa.payment.data', 'Related payments Data',
+        'fatturapa.payment.data', 'Related Payments Data',
         ondelete='cascade', index=True)
 
 
@@ -127,10 +127,10 @@ class WelfareFundDataLine(models.Model):
 class DiscountRisePrice(models.Model):
     # _position = ['2.1.1.8', '2.2.1.10']
     _name = "discount.rise.price"
-    _description = 'E-invoice Discount Supplement Price Data'
+    _description = 'E-invoice Discount Supplement Data'
 
     name = fields.Selection(
-        [('SC', 'Discount'), ('MG', 'Supplement Price')], 'Type')
+        [('SC', 'Discount'), ('MG', 'Supplement')], 'Type')
     percentage = fields.Float('Percentage')
     amount = fields.Float('Amount', digits=dp.get_precision('Discount'))
     invoice_line_id = fields.Many2one(
@@ -158,8 +158,8 @@ class FatturapaRelatedDocumentType(models.Model):
         ],
         'Document Type', required=True
     )
-    name = fields.Char('DocumentID', size=20, required=True)
-    lineRef = fields.Integer('LineRef')
+    name = fields.Char('Document ID', size=20, required=True)
+    lineRef = fields.Integer('Line Ref.')
     invoice_line_id = fields.Many2one(
         'account.invoice.line', 'Related Invoice Line',
         ondelete='cascade', index=True)
@@ -167,7 +167,7 @@ class FatturapaRelatedDocumentType(models.Model):
         'account.invoice', 'Related Invoice',
         ondelete='cascade', index=True)
     date = fields.Date('Date')
-    numitem = fields.Char('NumItem', size=20)
+    numitem = fields.Char('Item Num.', size=20)
     code = fields.Char('Order Agreement Code', size=100)
     cig = fields.Char('CIG Code', size=15)
     cup = fields.Char('CUP Code', size=15)
@@ -209,11 +209,11 @@ class FatturaAttachments(models.Model):
 class FatturapaRelatedDdt(models.Model):
     # _position = ['2.1.2', '2.2.3', '2.1.4', '2.1.5', '2.1.6']
     _name = 'fatturapa.related_ddt'
-    _description = 'E-invoice Related DdT'
+    _description = 'E-invoice Related DDT'
 
-    name = fields.Char('DocumentID', size=20, required=True)
+    name = fields.Char('Document ID', size=20, required=True)
     date = fields.Date('Date')
-    lineRef = fields.Integer('LineRef')
+    lineRef = fields.Integer('Line Ref.')
     invoice_line_id = fields.Many2one(
         'account.invoice.line', 'Related Invoice Line',
         ondelete='cascade', index=True)
@@ -240,12 +240,12 @@ class AccountInvoiceLine(models.Model):
     )
     ftpa_related_ddts = fields.One2many(
         'fatturapa.related_ddt', 'invoice_line_id',
-        'Related DdT', copy=False
+        'Related DDT', copy=False
     )
     admin_ref = fields.Char('Admin. ref.', size=20, copy=False)
     discount_rise_price_ids = fields.One2many(
         'discount.rise.price', 'invoice_line_id',
-        'Discount and Supplement Price Details', copy=False
+        'Discount or Supplement Details', copy=False
     )
     ftpa_line_number = fields.Integer("Line number", readonly=True, copy=False)
 
@@ -293,7 +293,7 @@ class AccountInvoice(models.Model):
         'res.partner', string="Intermediary")
     #  1.6
     sender = fields.Selection(
-        [('CC', 'assignee / partner'), ('TZ', 'third person')], 'Sender')
+        [('CC', 'assignee/partner'), ('TZ', 'third person')], 'Sender')
     #  2.1.1.5
     #  2.1.1.5.1
     ftpa_withholding_type = fields.Selection(
@@ -323,16 +323,16 @@ class AccountInvoice(models.Model):
     #  2.1.8
     ftpa_related_ddts = fields.One2many(
         'fatturapa.related_ddt', 'invoice_id',
-        'Related DdT', copy=False
+        'Related DDT', copy=False
     )
     #  2.1.9
     carrier_id = fields.Many2one(
         'res.partner', string="Carrier", copy=False)
     transport_vehicle = fields.Char('Vehicle', size=80, copy=False)
     transport_reason = fields.Char('Reason', size=80, copy=False)
-    number_items = fields.Integer('number of items', copy=False)
+    number_items = fields.Integer('Number of Items', copy=False)
     description = fields.Char('Description', size=100, copy=False)
-    unit_weight = fields.Char('Weight unit', size=10, copy=False)
+    unit_weight = fields.Char('Weight Unit', size=10, copy=False)
     gross_weight = fields.Float('Gross Weight', copy=False)
     net_weight = fields.Float('Net Weight', copy=False)
     pickup_datetime = fields.Datetime('Pick up', copy=False)
@@ -341,8 +341,8 @@ class AccountInvoice(models.Model):
     delivery_datetime = fields.Datetime('Delivery Date Time', copy=False)
     ftpa_incoterms = fields.Char(string="Incoterms", copy=False)
     #  2.1.10
-    related_invoice_code = fields.Char('Related invoice code', copy=False)
-    related_invoice_date = fields.Date('Related invoice date', copy=False)
+    related_invoice_code = fields.Char('Related Invoice Code', copy=False)
+    related_invoice_date = fields.Date('Related Invoice Date', copy=False)
     #  2.2.1 invoice lines
     #  2.2.2
     fatturapa_summary_ids = fields.One2many(
@@ -384,9 +384,9 @@ class AccountInvoice(models.Model):
         readonly=True, copy=False)
     efatt_stabile_organizzazione_provincia = fields.Char(
         string="Organization Province",
-        help="Acronym of the Province to which the municipality belongs, "
-             "indicated in the information element 1.2.3.4 <Comune>. "
-             "Must be filled if the information element 1.2.3.6 <Nazione> is"
+        help="Acronym of the Province to which the municipality indicated "
+             "in the information element 1.2.3.4 <Comune> belongs. "
+             "Must be filled if the information element 1.2.3.6 <Nazione> is "
              "equal to IT",
         readonly=True, copy=False)
     efatt_stabile_organizzazione_nazione = fields.Char(

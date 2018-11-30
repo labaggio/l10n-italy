@@ -37,7 +37,7 @@ class ResPartner(models.Model):
     # 1.1.6
     pec_destinatario = fields.Char(
         "Addressee PEC",
-        help="PEC to which the Electronic Invoice will be sent. "
+        help="PEC to which the electronic invoice will be sent. "
              "Must be filled "
              "ONLY when the information element "
              "<CodiceDestinatario> is '0000000'"
@@ -81,7 +81,7 @@ class ResPartner(models.Model):
                     ) % partner.name)
                 if not partner.vat and not partner.fiscalcode:
                     raise ValidationError(_(
-                        "Partner %s, must have VAT Number or Fiscal Code"
+                        "Partner %s must have VAT Number or Fiscal Code"
                     ) % partner.name)
                 if not partner.street:
                     raise ValidationError(_(
