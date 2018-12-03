@@ -66,7 +66,7 @@ class FatturapaPaymentDetail(models.Model):
     recepit_surname = fields.Char("Receipt Issuer Surname")
     recepit_cf = fields.Char("Receipt Issuer FC")
     recepit_title = fields.Char("Receipt Issuer Title")
-    payment_bank_name = fields.Char("Bank name")
+    payment_bank_name = fields.Char("Bank Name")
     payment_bank_iban = fields.Char("IBAN")
     payment_bank_abi = fields.Char("ABI")
     payment_bank_cab = fields.Char("CAB")
@@ -75,8 +75,8 @@ class FatturapaPaymentDetail(models.Model):
         'res.partner.bank', string="Payment Bank")
     prepayment_discount = fields.Float('Prepayment Discount')
     max_payment_date = fields.Date('Maximum Date for Payment')
-    penalty_amount = fields.Float('Amount of Penality')
-    penalty_date = fields.Date('Effective Date of Penality')
+    penalty_amount = fields.Float('Amount of Penalty')
+    penalty_date = fields.Date('Effective Date of Penalty')
     payment_code = fields.Char('Payment Code')
     account_move_line_id = fields.Many2one(
         'account.move.line', string="Payment Line")
@@ -99,8 +99,8 @@ class WelfareFundType(models.Model):
     _name = "welfare.fund.type"
     _description = 'welfare fund type'
 
-    name = fields.Char('name')
-    description = fields.Char('description')
+    name = fields.Char('Name')
+    description = fields.Char('Description')
 
 
 class WelfareFundDataLine(models.Model):
@@ -112,12 +112,12 @@ class WelfareFundDataLine(models.Model):
         'welfare.fund.type', string="Welfare Fund Type")
     kind_id = fields.Many2one('account.tax.kind', string="Non taxable nature")
     welfare_rate_tax = fields.Float('Welfare Rate tax')
-    welfare_amount_tax = fields.Float('Welfare Amount tax')
+    welfare_amount_tax = fields.Float('Welfare Amount Tax')
     welfare_taxable = fields.Float('Welfare Taxable')
-    welfare_Iva_tax = fields.Float('Welfare tax')
+    welfare_Iva_tax = fields.Float('Welfare Tax')
     subjected_withholding = fields.Char(
         'Subjected to Withholding', size=2)
-    pa_line_code = fields.Char('PA Code for this record', size=20)
+    pa_line_code = fields.Char('PA Code for this Record', size=20)
     invoice_id = fields.Many2one(
         'account.invoice', 'Related Invoice',
         ondelete='cascade', index=True
@@ -247,7 +247,7 @@ class AccountInvoiceLine(models.Model):
         'discount.rise.price', 'invoice_line_id',
         'Discount or Supplement Details', copy=False
     )
-    ftpa_line_number = fields.Integer("Line number", readonly=True, copy=False)
+    ftpa_line_number = fields.Integer("Line Number", readonly=True, copy=False)
 
 
 class FaturapaSummaryData(models.Model):
@@ -265,8 +265,8 @@ class FaturapaSummaryData(models.Model):
     ], string="Non taxable nature")
     incidental_charges = fields.Float('Incidental Charges')
     rounding = fields.Float('Rounding')
-    amount_untaxed = fields.Float('Amount untaxed')
-    amount_tax = fields.Float('Amount tax')
+    amount_untaxed = fields.Float('Amount Untaxed')
+    amount_tax = fields.Float('Amount Tax')
     payability = fields.Selection([
         ('I', 'Immediate payability'),
         ('D', 'Deferred payability'),
@@ -286,19 +286,19 @@ class AccountInvoice(models.Model):
     # 1.2 -- partner_id
     # 1.3
     tax_representative_id = fields.Many2one(
-        'res.partner', string="Tax Rapresentative")
+        'res.partner', string="Tax Representative")
     #  1.4 company_id
     #  1.5
     intermediary = fields.Many2one(
         'res.partner', string="Intermediary")
     #  1.6
     sender = fields.Selection(
-        [('CC', 'assignee/partner'), ('TZ', 'third person')], 'Sender')
+        [('CC', 'Assignee / Partner'), ('TZ', 'Third Person')], 'Sender')
     #  2.1.1.5
     #  2.1.1.5.1
     ftpa_withholding_type = fields.Selection(
         [('RT01', 'Natural Person'), ('RT02', 'Legal Person')],
-        'Withholding type'
+        'Withholding Type'
     )
     #  2.1.1.5.2 2.1.1.5.3 2.1.1.5.4 mapped to l10n_it_withholding_tax fields
 
@@ -318,7 +318,7 @@ class AccountInvoice(models.Model):
     #  2.1.7
     activity_progress_ids = fields.One2many(
         'faturapa.activity.progress', 'invoice_id',
-        'Fase of Activity Progress', copy=False
+        'Phase of Activity Progress', copy=False
     )
     #  2.1.8
     ftpa_related_ddts = fields.One2many(
@@ -407,5 +407,5 @@ class AccountInvoice(models.Model):
              "enables the seller/provider to issue in the same year several "
              "documents with same number)", copy=False)
     electronic_invoice_subjected = fields.Boolean(
-        'Subjected to electronic invoice',
+        'Subjected to Electronic Invoice',
         related='partner_id.electronic_invoice_subjected', readonly=True)

@@ -12,7 +12,7 @@ class ResPartner(models.Model):
     eori_code = fields.Char('EORI Code', size=20)
     license_number = fields.Char('License Code', size=20)
     # 1.2.6 RiferimentoAmministrazione
-    pa_partner_code = fields.Char('PA Code for partner', size=20)
+    pa_partner_code = fields.Char('PA Code for Partner', size=20)
     # 1.2.1.4
     register = fields.Char('Professional Register', size=60)
     # 1.2.1.5
@@ -43,7 +43,7 @@ class ResPartner(models.Model):
              "<CodiceDestinatario> is '0000000'"
     )
     electronic_invoice_subjected = fields.Boolean(
-        "Subjected to electronic invoice")
+        "Subjected to Electronic Invoice")
 
     @api.multi
     @api.constrains(
