@@ -12,7 +12,7 @@ class AccountInvoice(models.Model):
         ondelete='restrict', copy=False)
     inconsistencies = fields.Text('Import Inconsistencies', copy=False)
     e_invoice_line_ids = fields.One2many(
-        "einvoice.line", "invoice_id", string="Lines detail",
+        "einvoice.line", "invoice_id", string="Lines Detail",
         readonly=True, copy=False)
 
     @api.multi
@@ -49,7 +49,7 @@ class fatturapa_article_code(models.Model):
     name = fields.Char('Code Type')
     code_val = fields.Char('Code Value')
     e_invoice_line_id = fields.Many2one(
-        'einvoice.line', 'Related E-bill line', readonly=True
+        'einvoice.line', 'Related E-bill Line', readonly=True
     )
 
 
@@ -68,7 +68,7 @@ class AccountInvoiceLine(models.Model):
 class DiscountRisePrice(models.Model):
     _inherit = "discount.rise.price"
     e_invoice_line_id = fields.Many2one(
-        'einvoice.line', 'Related E-bill line', readonly=True
+        'einvoice.line', 'Related E-bill Line', readonly=True
     )
 
 

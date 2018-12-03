@@ -19,9 +19,9 @@ class FatturaPAAttachmentIn(models.Model):
         "res.partner", string="Supplier", compute="_compute_xml_data",
         store=True)
     invoices_number = fields.Integer(
-        "Bills number", compute="_compute_xml_data", store=True)
+        "Bills Number", compute="_compute_xml_data", store=True)
     invoices_total = fields.Float(
-        "Bills total", compute="_compute_xml_data", store=True,
+        "Bills Total", compute="_compute_xml_data", store=True,
         help="If specified by supplier, total amount of the document net of "
              "any discount and including tax charged to the buyer/ordered"
     )
