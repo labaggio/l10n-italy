@@ -28,7 +28,7 @@ class WizardExportFatturapa(models.TransientModel):
         return res
 
     include_ddt_data = fields.Selection([
-        ('dati_ddt', 'Include DDT data'),
+        ('dati_ddt', 'Include DDT Data'),
         ('dati_trasporto', 'Include transport data'),
         ],
         string="DDT Data",
