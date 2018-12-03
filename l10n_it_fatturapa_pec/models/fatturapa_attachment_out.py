@@ -36,9 +36,9 @@ class FatturaPAAttachmentOut(models.Model):
     last_sdi_response = fields.Text(
         string='Last Response from Exchange System', default='No response yet',
         readonly=True)
-    sending_date = fields.Datetime("Sent date", readonly=True)
-    delivered_date = fields.Datetime("Delivered date", readonly=True)
-    sending_user = fields.Many2one("res.users", "Sending user", readonly=True)
+    sending_date = fields.Datetime("Sent Date", readonly=True)
+    delivered_date = fields.Datetime("Delivered Date", readonly=True)
+    sending_user = fields.Many2one("res.users", "Sending User", readonly=True)
 
     @api.multi
     def reset_to_ready(self):
