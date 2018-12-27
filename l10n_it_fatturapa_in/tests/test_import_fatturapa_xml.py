@@ -21,7 +21,6 @@ class TestFatturaPAXMLValidation(SingleTransactionCase):
     def create_wt(self):
         return self.env['withholding.tax'].create({
             'name': '1040',
-            'code': '1040',
             'account_receivable_id': self.payable_account_id,
             'account_payable_id': self.payable_account_id,
             'payment_term': self.env.ref('account.account_payment_term').id,
@@ -45,6 +44,13 @@ class TestFatturaPAXMLValidation(SingleTransactionCase):
         self.imac = self.env.ref(
             'product.product_product_8_product_template')
         self.service = self.env.ref('product.product_product_consultant')
+        self.state = self.env['res.country.state']
+        self.state.create({
+            'code': 'SS',
+            'name': 'Sassari',
+            'country_id': self.env['res.country'].search(
+                [('code', '=', 'IT')]).id
+        })
 
     def run_wizard(self, name, file_name):
         attach_id = self.attach_model.create(
@@ -185,9 +191,9 @@ class TestFatturaPAXMLValidation(SingleTransactionCase):
             invoice.invoice_line[1].invoice_line_tax_id[0].name,
             '22% ftPA acq')
         self.assertEqual(
-            invoice.invoice_line[0].invoice_line_tax_id[0].amount, 22)
+            invoice.invoice_line[0].invoice_line_tax_id[0].amount, 0.22)
         self.assertEqual(
-            invoice.invoice_line[1].invoice_line_tax_id[0].amount, 22)
+            invoice.invoice_line[1].invoice_line_tax_id[0].amount, 0.22)
         self.assertEqual(
             invoice.invoice_line[1].price_unit, 2)
         self.assertTrue(len(invoice.e_invoice_line_ids) == 2)
