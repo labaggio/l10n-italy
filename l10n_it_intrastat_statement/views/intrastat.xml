@@ -40,8 +40,8 @@
                                 <field name="fiscalyear"/>
                                 <field name="period_type"/>
                                 <field name="period_number" />
-                                <field name="date_start"/>
-                                <field name="date_stop"/>
+                                <field name="date_start" invisible="1"/>
+                                <field name="date_stop" invisible="1"/>
                             </group>
                             <group>
                                 <field name="number"/>
@@ -65,25 +65,25 @@
                             <page string="Sale" attrs="{'invisible':[('sale','=', False)]}">
                                 <group>
                                     <group>
-                                        <field name="sale_statement_sequence" />
+                                        <field name="sale_statement_sequence" string="Statement Sequence"/>
                                     </group>
                                     <newlabel/>
                                     <group string="Goods Sale - Section 1">
-                                        <field name="sale_section1_operation_number" />
-                                        <field name="sale_section1_operation_amount" />
+                                        <field name="sale_section1_operation_number" string="Operation Nr"/>
+                                        <field name="sale_section1_operation_amount" string="Operation Amount"/>
                                     </group>
                                     <group string="Goods Refund - Section 2">
-                                        <field name="sale_section2_operation_number" />
-                                        <field name="sale_section2_operation_amount" />
+                                        <field name="sale_section2_operation_number" string="Operation Nr"/>
+                                        <field name="sale_section2_operation_amount" string="Operation Amount"/>
                                     </group>
                                     <newline/>
                                     <group string="Services Sale - Section 3">
-                                        <field name="sale_section3_operation_number" />
-                                        <field name="sale_section3_operation_amount" />
+                                        <field name="sale_section3_operation_number" string="Operation Nr"/>
+                                        <field name="sale_section3_operation_amount" string="Operation Amount"/>
                                     </group>
                                     <group string="Services Refund - Section 4">
-                                        <field name="sale_section4_operation_number" />
-                                        <field name="sale_section4_operation_amount" />
+                                        <field name="sale_section4_operation_number" string="Operation Nr"/>
+                                        <field name="sale_section4_operation_amount" string="Operation Amount"/>
                                     </group>
                                 </group>
                                 <newline/>
@@ -113,25 +113,25 @@
                             <page string="Purchase" attrs="{'invisible':[('purchase','=', False)]}">
                                 <group>
                                     <group>
-                                        <field name="purchase_statement_sequence" />
+                                        <field name="purchase_statement_sequence" string="Statement Sequence"/>
                                     </group>
                                     <newlabel/>
                                     <group string="Goods Purchase - Section 1">
-                                        <field name="purchase_section1_operation_number" />
-                                        <field name="purchase_section1_operation_amount" />
+                                        <field name="purchase_section1_operation_number" string="Operation Nr"/>
+                                        <field name="purchase_section1_operation_amount" string="Operation Amount"/>
                                     </group>
                                     <group string="Goods Refund Purchase - Section 2">
-                                        <field name="purchase_section2_operation_number" />
-                                        <field name="purchase_section2_operation_amount" />
+                                        <field name="purchase_section2_operation_number" string="Operation Nr"/>
+                                        <field name="purchase_section2_operation_amount" string="Operation Amount"/>
                                     </group>
                                     <newline/>
                                     <group string="Services Purchase - Section 3">
-                                        <field name="purchase_section3_operation_number" />
-                                        <field name="purchase_section3_operation_amount" />
+                                        <field name="purchase_section3_operation_number" string="Operation Nr"/>
+                                        <field name="purchase_section3_operation_amount" string="Operation Amount"/>
                                     </group>
                                     <group string="Services Refund Purchase - Section 4">
-                                        <field name="purchase_section4_operation_number" />
-                                        <field name="purchase_section4_operation_amount" />
+                                        <field name="purchase_section4_operation_number" string="Operation Nr"/>
+                                        <field name="purchase_section4_operation_amount" string="Operation Amount"/>
                                     </group>
                                 </group>
                                 <newline/>
@@ -170,14 +170,14 @@
             <field name="model">account.intrastat.statement</field>
             <field name="arch" type="xml">
                 <search string="Intrastat Statements">
-                    <filter icon="terp-sale" string="Sale" domain="[('sale','=',True)]"/>
+                    <!--filter icon="terp-sale" string="Sale" domain="[('sale','=',True)]"/>
                     <filter icon="terp-purchase" string="Purchase" domain="[('purchase','=',True)]"/>
-                    <field name="company_id" groups="base.group_multi_company"></field>
-                    <group expand="0" string="Group By">
+                    <field name="company_id" groups="base.group_multi_company"></field-->
+                    <!--group expand="0" string="Group By">
                         <filter string="Year" icon="terp-folder-orange" domain="" context="{'group_by':'fiscalyear'}"/>
                         <filter string="Sale" icon="terp-stock_symbol-selection" domain="" context="{'group_by':'sale'}"/>
                         <filter string="Purchase" icon="terp-stock_symbol-selection" domain="" context="{'group_by':'purchase'}"/>
-                    </group>
+                    </group-->
                 </search>
             </field>
         </record>

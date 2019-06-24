@@ -175,7 +175,7 @@ class AccountIntrastatStatement(models.Model):
                                default=_default_vat_delegate)
     name_delegate = fields.Char(string='Name delegate',
                                 default=_default_name_delegate)
-    fiscalyear = fields.Integer(string='Year', required=True)
+    fiscalyear = fields.Integer(string='Year', required=True, default=fields.Date.today().year)
     period_type = fields.Selection([
         ('M', 'Month'),
         ('T', 'Quarterly'),
@@ -216,83 +216,81 @@ class AccountIntrastatStatement(models.Model):
     ], 'Code Type', required=True, default='good')
 
     sale_statement_sequence = fields.Integer(
-        string='Statement Sequence',
         default=_get_sequence)
     sale_section1_ids = fields.One2many(
         'account.intrastat.statement.sale.section1',
         'statement_id', string='Sale - Section 1')
     sale_section1_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s1')
     sale_section1_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s1')
     sale_section2_ids = fields.One2many(
         'account.intrastat.statement.sale.section2',
         'statement_id', string='Sale - Section 2')
     sale_section2_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s2')
     sale_section2_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s2')
     sale_section3_ids = fields.One2many(
         'account.intrastat.statement.sale.section3',
         'statement_id', string='Sale - Section 3')
     sale_section3_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s3')
     sale_section3_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s3')
     sale_section4_ids = fields.One2many(
         'account.intrastat.statement.sale.section4',
         'statement_id', string='Sale - Section 4')
     sale_section4_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s4')
     sale_section4_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s4')
 
     purchase_statement_sequence = fields.Integer(
-        string='Statement Sequence',
         default=_get_sequence)
     purchase_section1_ids = fields.One2many(
         'account.intrastat.statement.purchase.section1',
         'statement_id', string='Purchase - Section 1')
     purchase_section1_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s1')
     purchase_section1_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s1')
     purchase_section2_ids = fields.One2many(
         'account.intrastat.statement.purchase.section2',
         'statement_id', string='Purchase - Section 2')
     purchase_section2_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s2')
     purchase_section2_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s2')
     purchase_section3_ids = fields.One2many(
         'account.intrastat.statement.purchase.section3',
         'statement_id', string='Purchase - Section 3')
     purchase_section3_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s3')
     purchase_section3_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s3')
     purchase_section4_ids = fields.One2many(
         'account.intrastat.statement.purchase.section4',
         'statement_id', string='Purchase - Section 4')
     purchase_section4_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s4')
     purchase_section4_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s4')
 
     @api.model
@@ -311,11 +309,9 @@ class AccountIntrastatStatement(models.Model):
     @api.onchange('period_type', 'period_number')
     def onchange_period(self):
         for statement in self:
-            if (
-                    not statement.fiscalyear
-                    or not statement.period_type
-                    or not statement.period_number
-            ):
+            if not statement.fiscalyear \
+               or not statement.period_type \
+               or not statement.period_number:
                 continue
             date_start_year = datetime.strptime(
                 '{}-01-01'.format(statement.fiscalyear), '%Y-%m-%d')
@@ -332,6 +328,8 @@ class AccountIntrastatStatement(models.Model):
                 else:
                     period_date_stop = datetime(date_start_year.year, 12, 31)
             else:
+                if statement.period_number > 4:
+                    statement.period_number = 1
                 if statement.period_number == 1:
                     period_date_start = datetime(date_start_year.year, 1, 1)
                     period_date_stop = datetime(date_start_year.year, 3, 31)
@@ -344,12 +342,11 @@ class AccountIntrastatStatement(models.Model):
                 elif statement.period_number == 4:
                     period_date_start = datetime(date_start_year.year, 10, 1)
                     period_date_stop = datetime(date_start_year.year, 12, 31)
-            statement.date_start = period_date_start
-            statement.date_stop = period_date_stop
+            statement.date_start = fields.Date.to_date(period_date_start)
+            statement.date_stop = fields.Date.to_date(period_date_stop)
 
     @api.model
     def _get_period_ref(self, invoice_line):
-
         res = {
             'year_id': False,
             'quarterly': False,
@@ -357,22 +354,11 @@ class AccountIntrastatStatement(models.Model):
         }
 
         res.update({'year_id': self.fiscalyear})
-        # Accounting > Configuration > Settings > Fiscal Year Last Day
-        date_obj = datetime.strptime(self.date_start, '%Y-%m-%d')
-
         # Monht/quaterly
         if self.period_type == 'T':
-            if date_obj.month in [1, 2, 3]:
-                res.update({'quarterly': 1})
-            elif date_obj.month in [4, 5, 6]:
-                res.update({'quarterly': 2})
-            elif date_obj.month in [7, 8, 9]:
-                res.update({'quarterly': 3})
-            elif date_obj.month in [10, 11, 12]:
-                res.update({'quarterly': 4})
+            res.update({'quarterly': self.preiod_number})
         else:
-            res.update({'month': date_obj.month})
-
+            res.update({'month': self.preiod_number})
         return res
 
     @api.one
@@ -427,7 +413,7 @@ class AccountIntrastatStatement(models.Model):
         # Calcolo progressivo interchange
         prg = self._get_progressive_interchange()
         file_name = ''
-        date_obj = datetime.strptime(self.date, '%Y-%m-%d')
+        date_obj = self.date
         if self.env.context.get('export_filename'):
             file_name = self.env.context.get('export_filename')
         elif self.company_id.intrastat_export_file_name:
@@ -1004,7 +990,7 @@ class AccountIntrastatStatementSaleSection1(models.Model):
         related="intrastat_code_id.additional_unit_uom_id.name")
     statistic_amount_euro = fields.Integer(string='Statistic Amount Euro',
                                            digits=dp.get_precision('Account'))
-    delivery_code_id = fields.Many2one('stock.incoterms',
+    delivery_code_id = fields.Many2one('account.incoterms',
                                        string='Delivery')
     transport_code_id = fields.Many2one('account.intrastat.transport',
                                         string='Transport')
@@ -1366,8 +1352,7 @@ class AccountIntrastatStatementSaleSection3(models.Model):
         # Data Fattura
         invoice_date_ddmmyy = False
         if self.invoice_date:
-            date_obj = datetime.strptime(self.invoice_date, '%Y-%m-%d')
-            invoice_date_ddmmyy = date_obj.strftime('%d%m%y')
+            invoice_date_ddmmyy = self.invoice_date.strftime('%d%m%y')
         rcd += '{:2s}'.format(invoice_date_ddmmyy or '')
         # Codice del servizio
         rcd += '{:6s}'.format(
@@ -1539,8 +1524,7 @@ class AccountIntrastatStatementSaleSection4(models.Model):
         # Data Fattura
         invoice_date_ddmmyy = False
         if self.invoice_date:
-            date_obj = datetime.strptime(self.invoice_date, '%Y-%m-%d')
-            invoice_date_ddmmyy = date_obj.strftime('%d%m%y')
+            invoice_date_ddmmyy = self.invoice_date.strftime('%d%m%y')
         rcd += '{:2s}'.format(invoice_date_ddmmyy or '')
         # Codice del servizio
         rcd += '{:6s}'.format(
@@ -1591,7 +1575,7 @@ class AccountIntrastatStatementPurchaseSection1(models.Model):
         related="intrastat_code_id.additional_unit_uom_id.name")
     statistic_amount_euro = fields.Integer(string='Statistic Amount Euro',
                                            digits=dp.get_precision('Account'))
-    delivery_code_id = fields.Many2one('stock.incoterms',
+    delivery_code_id = fields.Many2one('account.incoterms',
                                        string='Delivery')
     transport_code_id = fields.Many2one('account.intrastat.transport',
                                         string='Transport')
@@ -1991,7 +1975,6 @@ class AccountIntrastatStatementPurchaseSection3(models.Model):
             raise ValidationError(
                 _('Missing Vat code for %s in Purchase Section 3')
                 % (self.partner_id.name,))
-
         rcd = ''
         # Codice dello Stato membro del fornitore
         self.country_partner_id.with_context(
@@ -2011,8 +1994,7 @@ class AccountIntrastatStatementPurchaseSection3(models.Model):
         # Data Fattura
         invoice_date_ddmmyy = False
         if self.invoice_date:
-            date_obj = datetime.strptime(self.invoice_date, '%Y-%m-%d')
-            invoice_date_ddmmyy = date_obj.strftime('%d%m%y')
+            invoice_date_ddmmyy = self.invoice_date.strftime('%d%m%y')
         rcd += '{:2s}'.format(invoice_date_ddmmyy or '')
         # Codice del servizio
         rcd += '{:6s}'.format(
@@ -2046,8 +2028,7 @@ class AccountIntrastatStatementPurchaseSection4(models.Model):
     year_id = fields.Integer(string='Year Ref of Variation')
     protocol = fields.Integer(string='Protocol number', size=6)
     progressive_to_modify_id = fields.Many2one(
-        'account.intrastat.statement.purchase.section1',
-        'Progressive to Modify')
+        'account.intrastat.statement.purchase.section1')
     progressive_to_modify = fields.Integer('Progressive to Modify')
     partner_id = fields.Many2one('res.partner', string='Partner')
     country_partner_id = fields.Many2one('res.country',
@@ -2202,8 +2183,7 @@ class AccountIntrastatStatementPurchaseSection4(models.Model):
         # Data Fattura
         invoice_date_ddmmyy = False
         if self.invoice_date:
-            date_obj = datetime.strptime(self.invoice_date, '%Y-%m-%d')
-            invoice_date_ddmmyy = date_obj.strftime('%d%m%y')
+            invoice_date_ddmmyy = self.invoice_date.strftime('%d%m%y')
         rcd += '{:2s}'.format(invoice_date_ddmmyy or '')
         # Codice del servizio
         rcd += '{:6s}'.format(

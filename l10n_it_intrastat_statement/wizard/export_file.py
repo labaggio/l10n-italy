@@ -5,6 +5,7 @@ from openerp.tools.translate import _
 
 class AccountIntrastatExportFile(models.TransientModel):
     _name = "account.intrastat.export.file"
+    _description = "Intrastat export file"
 
     name = fields.Char(string='File Name', readonly=True)
     data = fields.Binary(string='File', readonly=True)

@@ -76,7 +76,7 @@ class AccountInvoiceLine(models.Model):
                     product_template.uom_id.category_id.id ==
                     intrastat_uom_kg.category_id.id
                 )):
-            weight_line_kg = self.env['product.uom']._compute_qty(
+            weight_line_kg = self.env['uom.uom']._compute_qty(
                 self.uos_id.id,
                 self.quantity,
                 intrastat_uom_kg.id
@@ -361,14 +361,16 @@ class AccountInvoice(models.Model):
 
 class AccountInvoiceIntrastat(models.Model):
     _name = 'account.invoice.intrastat'
+    _description = "Intrastat line"
 
     @api.one
     @api.depends('amount_currency')
     def _compute_amount_euro(self):
         company_currency = self.invoice_id.company_id.currency_id
         invoice_currency = self.invoice_id.currency_id
-        self.amount_euro = invoice_currency.compute(self.amount_currency,
-                                                    company_currency)
+        if invoice_currency:
+            self.amount_euro = invoice_currency.compute(self.amount_currency,
+                                                        company_currency)
 
     @api.one
     @api.depends('invoice_id.partner_id')
@@ -527,7 +529,7 @@ class AccountInvoiceIntrastat(models.Model):
     country_origin_id = fields.Many2one('res.country', string='Country Origin')
     country_good_origin_id = fields.Many2one(
         'res.country', string='Country Goods Origin')
-    delivery_code_id = fields.Many2one('stock.incoterms', string='Delivery')
+    delivery_code_id = fields.Many2one('account.incoterms', string='Delivery')
     transport_code_id = fields.Many2one(
         'account.intrastat.transport', string='Transport')
     province_destination_id = fields.Many2one('res.country.state',
