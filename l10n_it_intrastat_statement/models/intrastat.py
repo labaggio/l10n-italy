@@ -1,55 +1,22 @@
-from openerp import models, fields, api, _
-import openerp.addons.decimal_precision as dp
-from openerp.exceptions import ValidationError
+from odoo import models, fields, api, _
+import odoo.addons.decimal_precision as dp
+from odoo.exceptions import ValidationError
 from datetime import datetime, date, timedelta
+
+from dateutil.relativedelta import relativedelta
 
 
 class AccountIntrastatStatement(models.Model):
     _name = 'account.intrastat.statement'
     _description = 'Account INTRASTAT - Statement'
 
-    @api.model
-    def _default_company(self):
-        company_id = self._context.get(
-            'company_id',
-            self.env.user.company_id.id)
-        return company_id
-
-    @api.model
-    def _default_company_vat(self):
-        company_id = self._context.get(
-            'company_id', self.env.user.company_id.id)
-        if company_id:
-            vat = (
-                self.company_id.partner_id.vat
-                and self.company_id.partner_id.vat[2:]
-                or False
-            )
-            return vat
-        else:
-            return False
-
-    @api.model
-    def _default_vat_delegate(self):
-        company_id = self.env.user.company_id
-        if company_id:
-            return company_id.intrastat_delegated_vat
-        else:
-            return False
-
-    @api.model
-    def _default_name_delegate(self):
-        company_id = self.env.user.company_id
-        if company_id:
-            return company_id.intrastat_delegated_name
-        else:
-            return False
-
-    @api.model
-    def _default_custom(self):
-        company_id = self.env.user.company_id
-        if company_id:
-            return company_id.intrastat_custom_id
+    @api.multi
+    def name_get(self):
+        res = []
+        for statment in self:
+            res.append(
+                (statment.id, '%s' % (statment.number)))
+        return res
 
     def round_min_amount(self, amount, company=None):
         if company is None:
@@ -59,16 +26,16 @@ class AccountIntrastatStatement(models.Model):
         else:
             return amount
 
-    @api.one
     @api.depends('sale_section1_ids.amount_euro')
     def _compute_amount_sale_s1(self):
+        self.ensure_one()
         self.sale_section1_operation_number = len(self.sale_section1_ids)
         self.sale_section1_operation_amount = sum(
             line.amount_euro for line in self.sale_section1_ids)
 
-    @api.one
     @api.depends('sale_section2_ids.amount_euro')
     def _compute_amount_sale_s2(self):
+        self.ensure_one()
         self.sale_section2_operation_number = len(self.sale_section2_ids)
         amount_total = 0
         for line in self.sale_section2_ids:
@@ -78,31 +45,31 @@ class AccountIntrastatStatement(models.Model):
                 amount_total += line.amount_euro
         self.sale_section2_operation_amount = amount_total
 
-    @api.one
     @api.depends('sale_section3_ids.amount_euro')
     def _compute_amount_sale_s3(self):
+        self.ensure_one()
         self.sale_section3_operation_number = len(self.sale_section3_ids)
         self.sale_section3_operation_amount = sum(
             line.amount_euro for line in self.sale_section3_ids)
 
-    @api.one
     @api.depends('sale_section4_ids.amount_euro')
     def _compute_amount_sale_s4(self):
+        self.ensure_one()
         self.sale_section4_operation_number = len(self.sale_section4_ids)
         self.sale_section4_operation_amount = sum(
             line.amount_euro for line in self.sale_section4_ids)
 
-    @api.one
     @api.depends('purchase_section1_ids.amount_euro')
     def _compute_amount_purchase_s1(self):
+        self.ensure_one()
         self.purchase_section1_operation_number = len(
             self.purchase_section1_ids)
         self.purchase_section1_operation_amount = sum(
             line.amount_euro for line in self.purchase_section1_ids)
 
-    @api.one
     @api.depends('purchase_section2_ids.amount_euro')
     def _compute_amount_purchase_s2(self):
+        self.ensure_one()
         self.purchase_section2_operation_number = len(
             self.purchase_section2_ids)
         amount_total = 0
@@ -113,17 +80,17 @@ class AccountIntrastatStatement(models.Model):
                 amount_total += line.amount_euro
         self.purchase_section2_operation_amount = amount_total
 
-    @api.one
     @api.depends('purchase_section3_ids.amount_euro')
     def _compute_amount_purchase_s3(self):
+        self.ensure_one()
         self.purchase_section3_operation_number = len(
             self.purchase_section3_ids)
         self.purchase_section3_operation_amount = sum(
             line.amount_euro for line in self.purchase_section3_ids)
 
-    @api.one
     @api.depends('purchase_section4_ids.amount_euro')
     def _compute_amount_purchase_s4(self):
+        self.ensure_one()
         self.purchase_section4_operation_number = len(
             self.purchase_section4_ids)
         self.purchase_section4_operation_amount = sum(
@@ -131,12 +98,8 @@ class AccountIntrastatStatement(models.Model):
 
     @api.model
     def _compute_progressive(self):
-        '''
-        Assign univoque progressive to statement
-        TODO: why not a sequence?
-        '''
         # From last statement
-        st = self.search([], order='number', limit=1)
+        st = self.search([], order='number desc', limit=1)
         if st:
             return st.number + 1
         else:
@@ -162,20 +125,25 @@ class AccountIntrastatStatement(models.Model):
     def _get_sequence(self):
         return self.env['ir.sequence'].get('intrastat.statement.sequence')
 
-    number = fields.Integer(
-        string='Number', default=_compute_progressive)
+    number = fields.Integer(default=_compute_progressive)
     date = fields.Date(
         string='Submission Date', default=fields.Date.today(), required=True)
     company_id = fields.Many2one(
-        'res.company', string='Company', default=_default_company,
+        'res.company', string='Company',
+        default=lambda self: self.env.user.company_id.id,
         required=True)
     vat_taxpayer = fields.Char(
-        string='Vat taxpayer', required=True, default=_default_company_vat)
-    vat_delegate = fields.Char(string='Vat delegate',
-                               default=_default_vat_delegate)
-    name_delegate = fields.Char(string='Name delegate',
-                                default=_default_name_delegate)
-    fiscalyear = fields.Integer(string='Year', required=True)
+        string='Vat taxpayer', required=True,
+        default=lambda self: self.env.user.company_id.partner_id.vat
+        and self.env.user.company_id.partner_id.vat[2:] or False)
+    intrastat_vat_delegate = fields.Char(
+        string='Vat delegate',
+        default=lambda self: self.env.user.company_id.intrastat_delegated_vat)
+    intrastat_name_delegate = fields.Char(
+        string='Name delegate',
+        default=lambda self: self.env.user.company_id.intrastat_delegated_name)
+    fiscalyear = fields.Integer(string='Year', required=True,
+                                default=fields.Date.today().year)
     period_type = fields.Selection([
         ('M', 'Month'),
         ('T', 'Quarterly'),
@@ -185,8 +153,10 @@ class AccountIntrastatStatement(models.Model):
         help="Values accepted:\
         - Month : From 1 to 12 \
         - Quarterly: From 1 to 4", required=True)
-    date_start = fields.Date(string='Date Start')
-    date_stop = fields.Date(string='Date Stop')
+    date_start = fields.Date(store=True, readonly=True,
+                             compute='_compute_dates')
+    date_stop = fields.Date(store=True, readonly=True,
+                            compute='_compute_dates')
     content_type = fields.Selection([
         ('0', 'Normal Period'),
         ('8', 'Change Period in quarterly: only first month operations'),
@@ -199,11 +169,11 @@ class AccountIntrastatStatement(models.Model):
         ('9', 'First Statement in Change VAT or Close Activity'),
         ('0', 'None of the above cases'),
     ], 'Special Cases', required=True, default="0")
-    custom_id = fields.Many2one(
+    intrastat_custom_id = fields.Many2one(
         'account.intrastat.custom', string='Custom', required=True,
-        default=_default_custom)
-    sale = fields.Boolean(string='Sale', default=True)
-    purchase = fields.Boolean(string='Purchase', default=True)
+        default=lambda self: self.env.user.company_id.intrastat_custom_id)
+    sale = fields.Boolean(default=True)
+    purchase = fields.Boolean(default=True)
 
     intrastat_type_data = fields.Selection([
         ('all', 'All (Fiscal and Statistic)'),
@@ -216,140 +186,129 @@ class AccountIntrastatStatement(models.Model):
     ], 'Code Type', required=True, default='good')
 
     sale_statement_sequence = fields.Integer(
-        string='Statement Sequence',
         default=_get_sequence)
     sale_section1_ids = fields.One2many(
         'account.intrastat.statement.sale.section1',
         'statement_id', string='Sale - Section 1')
     sale_section1_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s1')
     sale_section1_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s1')
     sale_section2_ids = fields.One2many(
         'account.intrastat.statement.sale.section2',
         'statement_id', string='Sale - Section 2')
     sale_section2_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s2')
     sale_section2_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s2')
     sale_section3_ids = fields.One2many(
         'account.intrastat.statement.sale.section3',
         'statement_id', string='Sale - Section 3')
     sale_section3_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s3')
     sale_section3_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s3')
     sale_section4_ids = fields.One2many(
         'account.intrastat.statement.sale.section4',
         'statement_id', string='Sale - Section 4')
     sale_section4_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s4')
     sale_section4_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_sale_s4')
 
     purchase_statement_sequence = fields.Integer(
-        string='Statement Sequence',
         default=_get_sequence)
     purchase_section1_ids = fields.One2many(
         'account.intrastat.statement.purchase.section1',
         'statement_id', string='Purchase - Section 1')
     purchase_section1_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s1')
     purchase_section1_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s1')
     purchase_section2_ids = fields.One2many(
         'account.intrastat.statement.purchase.section2',
         'statement_id', string='Purchase - Section 2')
     purchase_section2_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s2')
     purchase_section2_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s2')
     purchase_section3_ids = fields.One2many(
         'account.intrastat.statement.purchase.section3',
         'statement_id', string='Purchase - Section 3')
     purchase_section3_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s3')
     purchase_section3_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s3')
     purchase_section4_ids = fields.One2many(
         'account.intrastat.statement.purchase.section4',
         'statement_id', string='Purchase - Section 4')
     purchase_section4_operation_number = fields.Integer(
-        string='Operation Nr', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s4')
     purchase_section4_operation_amount = fields.Integer(
-        string='Operation Amount', store=True, readonly=True,
+        store=True, readonly=True,
         compute='_compute_amount_purchase_s4')
 
     @api.model
     def create(self, vals):
-        statement = super(AccountIntrastatStatement, self).create(vals)
+        statement = super().create(vals)
         statement._normalize_statement()
         return statement
 
     @api.multi
     def write(self, vals):
-        res = super(AccountIntrastatStatement, self).write(vals)
+        res = super().write(vals)
         self._normalize_statement()
         self.recompute_sequence_lines()
         return res
 
-    @api.onchange('period_type', 'period_number')
-    def onchange_period(self):
-        for statement in self:
-            if (
-                    not statement.fiscalyear
-                    or not statement.period_type
-                    or not statement.period_number
-            ):
-                continue
-            date_start_year = datetime.strptime(
-                '{}-01-01'.format(statement.fiscalyear), '%Y-%m-%d')
-            if statement.period_type == 'M':
-                period_date_start = datetime(date_start_year.year,
-                                             statement.period_number,
-                                             1)
-                # Last date of month
-                if not statement.period_number == 12:
-                    period_date_work = datetime(date_start_year.year,
-                                                statement.period_number + 1,
-                                                1)
-                    period_date_stop = period_date_work - timedelta(days=1)
-                else:
-                    period_date_stop = datetime(date_start_year.year, 12, 31)
-            else:
-                if statement.period_number == 1:
-                    period_date_start = datetime(date_start_year.year, 1, 1)
-                    period_date_stop = datetime(date_start_year.year, 3, 31)
-                elif statement.period_number == 2:
-                    period_date_start = datetime(date_start_year.year, 4, 1)
-                    period_date_stop = datetime(date_start_year.year, 6, 30)
-                elif statement.period_number == 3:
-                    period_date_start = datetime(date_start_year.year, 7, 1)
-                    period_date_stop = datetime(date_start_year.year, 9, 30)
-                elif statement.period_number == 4:
-                    period_date_start = datetime(date_start_year.year, 10, 1)
-                    period_date_stop = datetime(date_start_year.year, 12, 31)
-            statement.date_start = period_date_start
-            statement.date_stop = period_date_stop
+    @api.depends('fiscalyear', 'period_type', 'period_number')
+    @api.onchange('fiscalyear', 'period_type', 'period_number')
+    def _compute_dates(self):
+        year = self.fiscalyear
+        if not year \
+           or not self.period_type \
+           or not self.period_number:
+            return
+
+        period_error_msg = self.check_period_number()
+        if period_error_msg:
+            return {'warning': {'message': period_error_msg}}
+
+        if self.period_type == 'M':
+            month = self.period_number
+            period_date_start = datetime(year, month, 1)
+            period_date_stop = \
+                datetime(year, month, 1) \
+                + relativedelta(months=1) \
+                - timedelta(days=1)
+        else:
+            quarter = self.period_number
+            month_start = int(12 / 4 * (quarter - 1) + 1)
+            period_date_start = datetime(year, month_start, 1)
+            period_date_stop = \
+                period_date_start \
+                + relativedelta(months=3) \
+                - timedelta(days=1)
+        self.date_start = fields.Date.to_date(period_date_start)
+        self.date_stop = fields.Date.to_date(period_date_stop)
 
     @api.model
     def _get_period_ref(self, invoice_line):
-
         res = {
             'year_id': False,
             'quarterly': False,
@@ -357,57 +316,38 @@ class AccountIntrastatStatement(models.Model):
         }
 
         res.update({'year_id': self.fiscalyear})
-        # Accounting > Configuration > Settings > Fiscal Year Last Day
-        date_obj = datetime.strptime(self.date_start, '%Y-%m-%d')
-
-        # Monht/quaterly
+        # Month/Quarter
         if self.period_type == 'T':
-            if date_obj.month in [1, 2, 3]:
-                res.update({'quarterly': 1})
-            elif date_obj.month in [4, 5, 6]:
-                res.update({'quarterly': 2})
-            elif date_obj.month in [7, 8, 9]:
-                res.update({'quarterly': 3})
-            elif date_obj.month in [10, 11, 12]:
-                res.update({'quarterly': 4})
+            res.update({'quarterly': self.period_number})
         else:
-            res.update({'month': date_obj.month})
-
+            res.update({'month': self.period_number})
         return res
 
-    @api.one
     def _normalize_statement(self):
         # Unlink lines sale/purchase sections
+        self.ensure_one()
         if not self.sale:
             self.with_context(unlink_section='sale')._unlink_sections()
         if not self.purchase:
             self.with_context(unlink_section='purchase')._unlink_sections()
         return True
 
-    @api.one
     def _unlink_sections(self):
+        self.ensure_one()
         # Unlink lines sale/purchase sections
         section_to_unlink = self.env.context.get('unlink_section', 'all')
         # sale
         if section_to_unlink in ['all', 'sale']:
-            for line in self.sale_section1_ids:
-                line.unlink()
-            for line in self.sale_section2_ids:
-                line.unlink()
-            for line in self.sale_section3_ids:
-                line.unlink()
-            for line in self.sale_section4_ids:
-                line.unlink()
+            self.sale_section1_ids.unlink()
+            self.sale_section2_ids.unlink()
+            self.sale_section3_ids.unlink()
+            self.sale_section4_ids.unlink()
         # purchase
         if section_to_unlink in ['all', 'purchase']:
-            for line in self.purchase_section1_ids:
-                line.unlink()
-            for line in self.purchase_section2_ids:
-                line.unlink()
-            for line in self.purchase_section3_ids:
-                line.unlink()
-            for line in self.purchase_section4_ids:
-                line.unlink()
+            self.purchase_section1_ids.unlink()
+            self.purchase_section2_ids.unlink()
+            self.purchase_section3_ids.unlink()
+            self.purchase_section4_ids.unlink()
         return True
 
     @api.model
@@ -427,7 +367,7 @@ class AccountIntrastatStatement(models.Model):
         # Calcolo progressivo interchange
         prg = self._get_progressive_interchange()
         file_name = ''
-        date_obj = datetime.strptime(self.date, '%Y-%m-%d')
+        date_obj = self.date
         if self.env.context.get('export_filename'):
             file_name = self.env.context.get('export_filename')
         elif self.company_id.intrastat_export_file_name:
@@ -449,9 +389,6 @@ class AccountIntrastatStatement(models.Model):
         # Codice utente abilitato (mittente)
         if self.company_id.intrastat_ua_code:
             intrastat_ua_code = self.company_id.intrastat_ua_code
-        # if not self.company_id.intrastat_ua_code:
-        #    raise ValidationError(
-        #    _('Missing Intrasta UA code : see company configuration'))
         rcd += '{:4s}'.format(intrastat_ua_code)
         # Riservato a SDA
         rcd += '{:12s}'.format("")
@@ -460,7 +397,7 @@ class AccountIntrastatStatement(models.Model):
         # Riservato a SDA
         rcd += '{:12s}'.format("")
         # Codice sezione doganale presso la quale si effettua l'operazione
-        rcd += '{:6s}'.format(self.custom_id.code or '')
+        rcd += '{:6s}'.format(self.intrastat_custom_id.code or '')
         # Riservato a SDA
         rcd += '{:4s}'.format("")
         # Codice fiscale o numero partita IVA o codice spedizioniere del
@@ -507,18 +444,18 @@ class AccountIntrastatStatement(models.Model):
         return rcd
 
     @api.model
-    def _prepare_export_prefix(self, type='sale'):
-        """Type: C=Sale A=Purchase"""
+    def _prepare_export_prefix(self, kind='sale'):
+        """Kind: C=Sale A=Purchase"""
         prefix = ''
         # Campo fisso: “EUROX”
         prefix += 'EUROX'
         # Partita IVA del presentatore o delegato
-        if self.vat_delegate:
-            prefix += '{:11s}'.format(self.vat_delegate)
+        if self.intrastat_vat_delegate:
+            prefix += '{:11s}'.format(self.intrastat_vat_delegate)
         else:
             prefix += '{:11s}'.format(self.vat_taxpayer)
         # Numero progressivo dell’elenco
-        if type == 'sale':
+        if kind == 'sale':
             prefix += '{:6s}'.format(
                 str(self.sale_statement_sequence).zfill(6))
         else:
@@ -539,12 +476,12 @@ class AccountIntrastatStatement(models.Model):
         return ''.join(number)
 
     @api.model
-    def _prepare_export_frontispiece(self, type):
-        rcd = self._prepare_export_prefix(type)
+    def _prepare_export_frontispiece(self, kind):
+        rcd = self._prepare_export_prefix(kind)
         rcd += '{:1s}'.format("0")
         rcd += '{:5s}'.format("".zfill(5))
         # Tipo riepilogo: A = acquisti C = cessioni
-        if type == 'purchase':
+        if kind == 'purchase':
             rcd += '{:1s}'.format("A")
         else:
             rcd += '{:1s}'.format("C")
@@ -565,9 +502,9 @@ class AccountIntrastatStatement(models.Model):
         # Casi particolari riferiti al soggetto obbligatò
         rcd += '{:1s}'.format(self.special_cases)
         # Partita IVA del soggetto delegato
-        rcd += '{:11s}'.format(self.vat_delegate or "".zfill(11))
+        rcd += '{:11s}'.format(self.intrastat_vat_delegate or "".zfill(11))
         # Numero e importo dettagli della sezione 1
-        if type == "purchase":
+        if kind == "purchase":
             rcd += '{:5s}'.format(
                 str(self.purchase_section1_operation_number).zfill(5))
             rcd += '{:13s}'.format(
@@ -578,7 +515,7 @@ class AccountIntrastatStatement(models.Model):
             rcd += '{:13s}'.format(
                 str(self.sale_section1_operation_amount).zfill(13))
         # Numero dettagli della sezione 2
-        if type == "purchase":
+        if kind == "purchase":
             rcd += '{:5s}'.format(
                 str(self.purchase_section2_operation_number).zfill(5))
             amount_format = self._format_negative_number_frontispiece(
@@ -593,7 +530,7 @@ class AccountIntrastatStatement(models.Model):
             rcd += '{:13s}'.format(
                 str(amount_format).zfill(13))
         # Numero dettagli della sezione 3
-        if type == "purchase":
+        if kind == "purchase":
             rcd += '{:5s}'.format(
                 str(self.purchase_section3_operation_number).zfill(5))
             rcd += '{:13s}'.format(
@@ -604,7 +541,7 @@ class AccountIntrastatStatement(models.Model):
             rcd += '{:13s}'.format(
                 str(self.sale_section3_operation_amount).zfill(13))
         # Numero dettagli della sezione 4
-        if type == "purchase":
+        if kind == "purchase":
             rcd += '{:5s}'.format(
                 str(self.purchase_section4_operation_number).zfill(5))
             rcd += '{:13s}'.format(
@@ -723,8 +660,8 @@ class AccountIntrastatStatement(models.Model):
 
         return file_content
 
-    @api.one
     def compute_statement(self):
+        self.ensure_one()
         # Unlink existing lines
         self._unlink_sections()
         # Setting period
@@ -959,20 +896,27 @@ class AccountIntrastatStatement(models.Model):
     def change_company_id(self):
         self.vat_taxpayer = (self.company_id.partner_id.vat
                              and self.company_id.partner_id.vat[2:] or False)
-        self.vat_delegate = self.company_id.intrastat_delegated_vat or False
+        self.intrastat_vat_delegate = (self.company_id.intrastat_delegated_vat
+                                       or False)
 
-    @api.onchange('period_number')
     @api.constrains('period_type', 'period_number')
-    def change_period_number(self):
+    def _constrain_period_number(self):
+        for statement in self:
+            period_error_msg = statement.check_period_number()
+            if period_error_msg:
+                raise ValidationError(period_error_msg)
+
+    @api.multi
+    def check_period_number(self):
         """Interval Control"""
-        if self.period_type == 'M' \
-                and (self.period_number < 1 or self.period_number > 12):
-            raise ValidationError(
-                _('Period Not Valid! Range accepted: from 1 to 12'))
-        if self.period_type == 'T' \
-                and (self.period_number < 1 or self.period_number > 4):
-            raise ValidationError(
-                _('Period Not Valid! Range accepted: from 1 to 4'))
+        self.ensure_one()
+        if self.period_type == 'M' and \
+                not (1 <= self.period_number <= 12):
+            return _('Period Not Valid! Range accepted: from 1 to 12')
+        if self.period_type == 'T' and \
+                not (1 <= self.period_number <= 4):
+            return _('Period Not Valid! Range accepted: from 1 to 4')
+        return False
 
 
 class AccountIntrastatStatementSaleSection1(models.Model):
@@ -1004,7 +948,7 @@ class AccountIntrastatStatementSaleSection1(models.Model):
         related="intrastat_code_id.additional_unit_uom_id.name")
     statistic_amount_euro = fields.Integer(string='Statistic Amount Euro',
                                            digits=dp.get_precision('Account'))
-    delivery_code_id = fields.Many2one('stock.incoterms',
+    delivery_code_id = fields.Many2one('account.incoterms',
                                        string='Delivery')
     transport_code_id = fields.Many2one('account.intrastat.transport',
                                         string='Transport')
@@ -1032,8 +976,7 @@ class AccountIntrastatStatementSaleSection1(models.Model):
 
     @api.model
     def _prepare_statement_line(self, inv_intra_line):
-        company_id = self._context.get(
-            'company_id', self.env.user.company_id)
+        company_id = self.env.user.company_id
         res = {
             'invoice_id': inv_intra_line.invoice_id.id or False,
             'partner_id': inv_intra_line.invoice_id.partner_id.id or False,
@@ -1366,8 +1309,7 @@ class AccountIntrastatStatementSaleSection3(models.Model):
         # Data Fattura
         invoice_date_ddmmyy = False
         if self.invoice_date:
-            date_obj = datetime.strptime(self.invoice_date, '%Y-%m-%d')
-            invoice_date_ddmmyy = date_obj.strftime('%d%m%y')
+            invoice_date_ddmmyy = self.invoice_date.strftime('%d%m%y')
         rcd += '{:2s}'.format(invoice_date_ddmmyy or '')
         # Codice del servizio
         rcd += '{:6s}'.format(
@@ -1394,7 +1336,7 @@ class AccountIntrastatStatementSaleSection4(models.Model):
         'account.intrastat.statement', string='Statement',
         readonly=True, ondelete="cascade")
     sequence = fields.Integer(string='Progressive')
-    custom_id = fields.Many2one('account.intrastat.custom', 'Custom')
+    intrastat_custom_id = fields.Many2one('account.intrastat.custom', 'Custom')
     month = fields.Integer(string='Month Ref of Refund')
     quarterly = fields.Integer(string='Quarterly Ref of Refund')
     year_id = fields.Integer(string='Year Ref of Variation')
@@ -1459,7 +1401,7 @@ class AccountIntrastatStatementSaleSection4(models.Model):
             'payment_method': inv_intra_line.payment_method or False,
             'country_payment_id':
                 inv_intra_line.country_payment_id.id or False,
-            'custom_id': statement_id.custom_id.id
+            'intrastat_custom_id': statement_id.intrastat_custom_id.id
         }
         return res
 
@@ -1475,8 +1417,8 @@ class AccountIntrastatStatementSaleSection4(models.Model):
         if not self.year_id:
             raise ValidationError(
                 _('Missing Year Ref on Sale Section 4'))
-        # .. custom_id
-        if not self.custom_id:
+        # .. intrastat_custom_id
+        if not self.intrastat_custom_id:
             raise ValidationError(
                 _('Missing custom on Sale Section 4'))
         # .. Protocol
@@ -1507,7 +1449,9 @@ class AccountIntrastatStatementSaleSection4(models.Model):
         rcd = ''
         # Codice della sezione doganale in cui è stato registrata la
         # dichiarazione da rettificare
-        rcd += '{:6s}'.format(self.custom_id and self.custom_id.code or '')
+        rcd += '{:6s}'.format(
+            self.intrastat_custom_id and
+            self.intrastat_custom_id.code or '')
         # Anno di registrazione della dichiarazione da rettificare
         start_year = self.year_id
         rcd += '{:2s}'.format(start_year and str(start_year)[2:] or '')
@@ -1539,8 +1483,7 @@ class AccountIntrastatStatementSaleSection4(models.Model):
         # Data Fattura
         invoice_date_ddmmyy = False
         if self.invoice_date:
-            date_obj = datetime.strptime(self.invoice_date, '%Y-%m-%d')
-            invoice_date_ddmmyy = date_obj.strftime('%d%m%y')
+            invoice_date_ddmmyy = self.invoice_date.strftime('%d%m%y')
         rcd += '{:2s}'.format(invoice_date_ddmmyy or '')
         # Codice del servizio
         rcd += '{:6s}'.format(
@@ -1591,7 +1534,7 @@ class AccountIntrastatStatementPurchaseSection1(models.Model):
         related="intrastat_code_id.additional_unit_uom_id.name")
     statistic_amount_euro = fields.Integer(string='Statistic Amount Euro',
                                            digits=dp.get_precision('Account'))
-    delivery_code_id = fields.Many2one('stock.incoterms',
+    delivery_code_id = fields.Many2one('account.incoterms',
                                        string='Delivery')
     transport_code_id = fields.Many2one('account.intrastat.transport',
                                         string='Transport')
@@ -1991,7 +1934,6 @@ class AccountIntrastatStatementPurchaseSection3(models.Model):
             raise ValidationError(
                 _('Missing Vat code for %s in Purchase Section 3')
                 % (self.partner_id.name,))
-
         rcd = ''
         # Codice dello Stato membro del fornitore
         self.country_partner_id.with_context(
@@ -2011,8 +1953,7 @@ class AccountIntrastatStatementPurchaseSection3(models.Model):
         # Data Fattura
         invoice_date_ddmmyy = False
         if self.invoice_date:
-            date_obj = datetime.strptime(self.invoice_date, '%Y-%m-%d')
-            invoice_date_ddmmyy = date_obj.strftime('%d%m%y')
+            invoice_date_ddmmyy = self.invoice_date.strftime('%d%m%y')
         rcd += '{:2s}'.format(invoice_date_ddmmyy or '')
         # Codice del servizio
         rcd += '{:6s}'.format(
@@ -2040,14 +1981,13 @@ class AccountIntrastatStatementPurchaseSection4(models.Model):
                                    readonly=True,
                                    ondelete="cascade")
     sequence = fields.Integer(string='Progressive')
-    custom_id = fields.Many2one('account.intrastat.custom', 'Custom')
+    intrastat_custom_id = fields.Many2one('account.intrastat.custom', 'Custom')
     month = fields.Integer(string='Month Ref of Refund')
     quarterly = fields.Integer(string='Quarterly Ref of Refund')
     year_id = fields.Integer(string='Year Ref of Variation')
     protocol = fields.Integer(string='Protocol number', size=6)
     progressive_to_modify_id = fields.Many2one(
-        'account.intrastat.statement.purchase.section1',
-        'Progressive to Modify')
+        'account.intrastat.statement.purchase.section1')
     progressive_to_modify = fields.Integer('Progressive to Modify')
     partner_id = fields.Many2one('res.partner', string='Partner')
     country_partner_id = fields.Many2one('res.country',
@@ -2111,7 +2051,7 @@ class AccountIntrastatStatementPurchaseSection4(models.Model):
             'payment_method': inv_intra_line.payment_method or False,
             'country_payment_id': (
                 inv_intra_line.country_payment_id.id or False),
-            'custom_id': statement_id.custom_id.id
+            'intrastat_custom_id': statement_id.intrastat_custom_id.id
         }
         return res
 
@@ -2127,8 +2067,8 @@ class AccountIntrastatStatementPurchaseSection4(models.Model):
         if not self.year_id:
             raise ValidationError(
                 _('Missing Year Ref on Purchase Section 4'))
-        # .. custom_id
-        if not self.custom_id:
+        # .. intrastat_custom_id
+        if not self.intrastat_custom_id:
             raise ValidationError(
                 _('Missing custom on Purchase Section 4'))
         # .. Protocol
@@ -2159,7 +2099,9 @@ class AccountIntrastatStatementPurchaseSection4(models.Model):
         rcd = ''
         # Codice della sezione doganale in cui è stato registrata la
         # dichiarazione da rettificare
-        rcd += '{:6s}'.format(self.custom_id and self.custom_id.code or '')
+        rcd += '{:6s}'.format(
+            self.intrastat_custom_id and
+            self.intrastat_custom_id.code or '')
         # Anno di registrazione della dichiarazione da rettificare
         start_year = self.year_id
         rcd += '{:2s}'.format(start_year and str(start_year)[2:] or '')
@@ -2202,8 +2144,7 @@ class AccountIntrastatStatementPurchaseSection4(models.Model):
         # Data Fattura
         invoice_date_ddmmyy = False
         if self.invoice_date:
-            date_obj = datetime.strptime(self.invoice_date, '%Y-%m-%d')
-            invoice_date_ddmmyy = date_obj.strftime('%d%m%y')
+            invoice_date_ddmmyy = self.invoice_date.strftime('%d%m%y')
         rcd += '{:2s}'.format(invoice_date_ddmmyy or '')
         # Codice del servizio
         rcd += '{:6s}'.format(

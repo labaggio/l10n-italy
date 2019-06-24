@@ -1,4 +1,4 @@
-from openerp import models, fields
+from odoo import models, fields
 
 
 class ProductCategory(models.Model):
@@ -21,6 +21,8 @@ class ProductCategory(models.Model):
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
+    intrastat_code_id = fields.Many2one('report.intrastat.code',
+                                        string='Intrastat Code')
     intrastat_type = fields.Selection(
         [
             ('good', 'Good'),
@@ -42,7 +44,7 @@ class ProductTemplate(models.Model):
         }
         # From Product
         if self.intrastat_type:
-            res['intrastat_code_id'] = self.intrastat_id.id
+            res['intrastat_code_id'] = self.intrastat_code_id.id
             res['intrastat_type'] = self.intrastat_type
         elif self.categ_id and self.categ_id.intrastat_code_id:
             res['intrastat_code_id'] = self.categ_id.intrastat_code_id.id

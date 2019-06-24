@@ -1,7 +1,7 @@
 
 {
-    'name': 'Intrastat',
-    'version': '11.0.1.0.0',
+    'name': 'ITA - Intrastat',
+    'version': '12.0.1.0.0',
     'category': 'Account',
     'author': 'Openforce'
               ', Link IT srl, Odoo Community Association (OCA)',
@@ -12,7 +12,8 @@
         'product',
         'stock',
         'stock_account',
-        'report_intrastat'],
+        'uom'
+    ],
     "data": [
         'security/ir.model.access.csv',
         'views/intrastat.xml',

@@ -1,20 +1,23 @@
-from openerp import models, fields, api, _
-from openerp.exceptions import ValidationError
+from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError
 
 
 class AccountIntrastatCustom(models.Model):
     _name = 'account.intrastat.custom'
     _description = 'Account INTRASTAT - Customs'
 
-    code = fields.Char(string='Code', size=6)
-    name = fields.Char(string='Name')
+    code = fields.Char(size=6)
+    name = fields.Char()
     date_start = fields.Date(string='Date start')
     date_stop = fields.Date(string='Date stop')
 
 
 class ReportIntrastatCode(models.Model):
+    _name = "report.intrastat.code"
+    _description = "Intrastat code"
 
-    _inherit = 'report.intrastat.code'
+    name = fields.Char(string='Intrastat Code')
+    description = fields.Char(string='Description')
 
     active = fields.Boolean(default=True)
     additional_unit_required = fields.Boolean(
@@ -24,7 +27,7 @@ class ReportIntrastatCode(models.Model):
         [('quantity', 'Quantity'), ('weight', 'Weight'), ('none', 'None')],
         string='Additional Unit of Measure FROM')
     additional_unit_uom_id = fields.Many2one(
-        'product.uom',
+        'uom.uom',
         string='Unit of Measure Additional')
     type = fields.Selection(
         [('good', 'Good'), ('service', 'Service')])

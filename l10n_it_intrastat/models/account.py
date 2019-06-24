@@ -1,9 +1,7 @@
-
-
-from openerp import models, fields, api, _
-import openerp.addons.decimal_precision as dp
-from openerp.exceptions import Warning
-from openerp.tools import float_is_zero
+from odoo import models, fields, api, _
+import odoo.addons.decimal_precision as dp
+from odoo.tools import float_is_zero
+from odoo.exceptions import UserError
 
 
 class AccountFiscalPosition(models.Model):
@@ -16,29 +14,7 @@ class AccountInvoiceLine(models.Model):
     _inherit = "account.invoice.line"
 
     def _prepare_intrastat_line(self):
-        res = {
-            'intrastat_code_id': False,
-            'intrastat_code_type': False,
-            'amount_currency': False,
-            'amount_euro': False,
-            'statistic_amount_euro': False,
-            'weight_kg': False,
-            'additional_units': False,
-            'transport_code_id': False,
-            'transation_nature_id': False,
-            'delivery_code_id': False,
-            # origin
-            'country_origin_id': False,
-            'country_good_origin_id': False,
-            'province_origin_id': False,
-            # destination
-            'country_destination_id': False,
-            'province_destination_id': False,
-            # invoice ref
-            'supply_method': False,
-            'payment_method': False,
-            'country_payment_id': False,
-        }
+        res = {}
         company_id = self.invoice_id.company_id
         product_template = self.product_id.product_tmpl_id
         # Code competence
@@ -76,7 +52,7 @@ class AccountInvoiceLine(models.Model):
                     product_template.uom_id.category_id.id ==
                     intrastat_uom_kg.category_id.id
                 )):
-            weight_line_kg = self.env['product.uom']._compute_qty(
+            weight_line_kg = self.env['uom.uom']._compute_qty(
                 self.uos_id.id,
                 self.quantity,
                 intrastat_uom_kg.id
@@ -241,7 +217,7 @@ class AccountInvoice(models.Model):
         for invoice in self:
             if not invoice.intrastat_line_ids:
                 invoice.compute_intrastat_lines()
-        super(AccountInvoice, self).action_move_create()
+        super().action_move_create()
         for invoice in self:
             if invoice.intrastat:
                 # Calcolo l'importo delle righe di fattura che hanno i prodotti
@@ -263,7 +239,7 @@ class AccountInvoice(models.Model):
                     total_amount - subtotal,
                     precision_digits=precision_digits
                 ):
-                    raise Warning(_('Total Intrastat must be ugual to\
+                    raise UserError(_('Total Intrastat must be ugual to\
                         Total Invoice Untaxed'))
         return True
 
@@ -361,18 +337,20 @@ class AccountInvoice(models.Model):
 
 class AccountInvoiceIntrastat(models.Model):
     _name = 'account.invoice.intrastat'
+    _description = "Intrastat line"
 
-    @api.one
     @api.depends('amount_currency')
     def _compute_amount_euro(self):
+        self.ensure_one()
         company_currency = self.invoice_id.company_id.currency_id
         invoice_currency = self.invoice_id.currency_id
-        self.amount_euro = invoice_currency.compute(self.amount_currency,
-                                                    company_currency)
+        if invoice_currency:
+            self.amount_euro = invoice_currency.compute(self.amount_currency,
+                                                        company_currency)
 
-    @api.one
     @api.depends('invoice_id.partner_id')
     def _compute_partner_data(self):
+        self.ensure_one()
         self.country_partner_id = self.invoice_id.partner_id.country_id.id
 
     @api.depends('invoice_id.reference',
@@ -435,39 +413,13 @@ class AccountInvoiceIntrastat(models.Model):
         Data default from partner
         '''
         res = {
-            'country_partner_id': False,
-            'vat_code': False,
-            'country_origin_id': False,
-            'country_good_origin_id': False,
-            'country_destination_id': False,
+            'country_partner_id': partner.country_id.id,
+            'vat_code': partner.vat and partner.vat[2:] or False,
+            'country_origin_id': partner.country_id.id,
+            'country_good_origin_id': partner.country_id.id,
+            'country_destination_id': partner.country_id.id,
         }
-        if partner:
-            res = {
-                'country_partner_id': partner.country_id.id,
-                'vat_code': partner.vat and partner.vat[2:] or False,
-                'country_origin_id': partner.country_id.id,
-                'country_good_origin_id': partner.country_id.id,
-                'country_destination_id': partner.country_id.id,
-            }
-
         return res
-    # -------------
-    # Defaults
-    # -------------
-
-    @api.model
-    def _default_province_origin(self):
-        if self.invoice_id.company_id.partner_id.state_id:
-            return self.invoice_id.company_id.partner_id.state_id
-        else:
-            return False
-
-    @api.model
-    def _default_country_destination(self):
-        if self.invoice_id.partner_id.country_id:
-            return self.invoice_id.partner_id.country_id
-        else:
-            return False
 
     invoice_id = fields.Many2one(
         'account.invoice', string='Invoice', required=True)
@@ -523,18 +475,18 @@ class AccountInvoiceIntrastat(models.Model):
     # Origin 
     province_origin_id = fields.Many2one(
         'res.country.state', string='Province Origin',
-        default=_default_province_origin)
+        default=lambda self: self.invoice_id.company_id.partner_id.state_id)
     country_origin_id = fields.Many2one('res.country', string='Country Origin')
     country_good_origin_id = fields.Many2one(
         'res.country', string='Country Goods Origin')
-    delivery_code_id = fields.Many2one('stock.incoterms', string='Delivery')
+    delivery_code_id = fields.Many2one('account.incoterms', string='Delivery')
     transport_code_id = fields.Many2one(
         'account.intrastat.transport', string='Transport')
     province_destination_id = fields.Many2one('res.country.state',
                                               string='province destination')
     country_destination_id = fields.Many2one(
         'res.country', string='Country Destination',
-        default=_default_country_destination)
+        default=lambda self: self.invoice_id.partner_id.country_id)
     invoice_number = fields.Char(string='Invoice Number',
                                  compute='_compute_invoice_ref', store=True)
     invoice_date = fields.Date(string='Invoice Date',
