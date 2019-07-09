@@ -40,8 +40,8 @@
                                 <field name="fiscalyear"/>
                                 <field name="period_type"/>
                                 <field name="period_number" />
-                                <field name="date_start" invisible="1"/>
-                                <field name="date_stop" invisible="1"/>
+                                <field name="date_start" readonly="1"/>
+                                <field name="date_stop" readonly="1"/>
                             </group>
                             <group>
                                 <field name="number"/>

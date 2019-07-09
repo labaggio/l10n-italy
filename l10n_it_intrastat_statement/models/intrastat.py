@@ -1,6 +1,8 @@
-from openerp import models, fields, api, _
-import openerp.addons.decimal_precision as dp
-from openerp.exceptions import ValidationError
+from dateutil.relativedelta import relativedelta
+
+from odoo import models, fields, api, _
+import odoo.addons.decimal_precision as dp
+from odoo.exceptions import ValidationError
 from datetime import datetime, date, timedelta
 
 
@@ -306,44 +308,36 @@ class AccountIntrastatStatement(models.Model):
         self.recompute_sequence_lines()
         return res
 
-    @api.onchange('period_type', 'period_number')
+    @api.onchange('fiscalyear', 'period_type', 'period_number')
     def onchange_period(self):
-        for statement in self:
-            if not statement.fiscalyear \
-               or not statement.period_type \
-               or not statement.period_number:
-                continue
-            date_start_year = datetime.strptime(
-                '{}-01-01'.format(statement.fiscalyear), '%Y-%m-%d')
-            if statement.period_type == 'M':
-                period_date_start = datetime(date_start_year.year,
-                                             statement.period_number,
-                                             1)
-                # Last date of month
-                if not statement.period_number == 12:
-                    period_date_work = datetime(date_start_year.year,
-                                                statement.period_number + 1,
-                                                1)
-                    period_date_stop = period_date_work - timedelta(days=1)
-                else:
-                    period_date_stop = datetime(date_start_year.year, 12, 31)
-            else:
-                if statement.period_number > 4:
-                    statement.period_number = 1
-                if statement.period_number == 1:
-                    period_date_start = datetime(date_start_year.year, 1, 1)
-                    period_date_stop = datetime(date_start_year.year, 3, 31)
-                elif statement.period_number == 2:
-                    period_date_start = datetime(date_start_year.year, 4, 1)
-                    period_date_stop = datetime(date_start_year.year, 6, 30)
-                elif statement.period_number == 3:
-                    period_date_start = datetime(date_start_year.year, 7, 1)
-                    period_date_stop = datetime(date_start_year.year, 9, 30)
-                elif statement.period_number == 4:
-                    period_date_start = datetime(date_start_year.year, 10, 1)
-                    period_date_stop = datetime(date_start_year.year, 12, 31)
-            statement.date_start = fields.Date.to_date(period_date_start)
-            statement.date_stop = fields.Date.to_date(period_date_stop)
+        year = self.fiscalyear
+        if not year \
+           or not self.period_type \
+           or not self.period_number:
+            return
+
+        period_error_msg = self.check_period_number()
+        if period_error_msg:
+            return {'warning': {'message': period_error_msg}}
+
+        if self.period_type == 'M':
+            month = self.period_number
+            period_date_start = datetime(year, month, 1)
+            period_date_stop = \
+                datetime(year, month, 1) \
+                + relativedelta(months=1) \
+                - timedelta(days=1)
+        else:
+            quarter = self.period_number
+            month_start = int(12 / 4 * (quarter - 1) + 1)
+            period_date_start = datetime(year, month_start, 1)
+            period_date_stop = \
+                period_date_start \
+                + relativedelta(months=3) \
+                - timedelta(days=1)
+
+        self.date_start = fields.Date.to_date(period_date_start)
+        self.date_stop = fields.Date.to_date(period_date_stop)
 
     @api.model
     def _get_period_ref(self, invoice_line):
@@ -354,11 +348,11 @@ class AccountIntrastatStatement(models.Model):
         }
 
         res.update({'year_id': self.fiscalyear})
-        # Monht/quaterly
+        # Month/Quarter
         if self.period_type == 'T':
-            res.update({'quarterly': self.preiod_number})
+            res.update({'quarterly': self.period_number})
         else:
-            res.update({'month': self.preiod_number})
+            res.update({'month': self.period_number})
         return res
 
     @api.one
@@ -947,18 +941,24 @@ class AccountIntrastatStatement(models.Model):
                              and self.company_id.partner_id.vat[2:] or False)
         self.vat_delegate = self.company_id.intrastat_delegated_vat or False
 
-    @api.onchange('period_number')
     @api.constrains('period_type', 'period_number')
-    def change_period_number(self):
+    def _constrain_period_number(self):
+        for statement in self:
+            period_error_msg = statement.check_period_number()
+            if period_error_msg:
+                raise ValidationError(period_error_msg)
+
+    @api.multi
+    def check_period_number(self):
         """Interval Control"""
-        if self.period_type == 'M' \
-                and (self.period_number < 1 or self.period_number > 12):
-            raise ValidationError(
-                _('Period Not Valid! Range accepted: from 1 to 12'))
-        if self.period_type == 'T' \
-                and (self.period_number < 1 or self.period_number > 4):
-            raise ValidationError(
-                _('Period Not Valid! Range accepted: from 1 to 4'))
+        self.ensure_one()
+        if self.period_type == 'M' and \
+                not (1 <= self.period_number <= 12):
+            return _('Period Not Valid! Range accepted: from 1 to 12')
+        if self.period_type == 'T' and \
+                not (1 <= self.period_number <= 4):
+            return _('Period Not Valid! Range accepted: from 1 to 4')
+        return False
 
 
 class AccountIntrastatStatementSaleSection1(models.Model):
