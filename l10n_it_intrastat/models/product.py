@@ -21,23 +21,24 @@ class ProductCategory(models.Model):
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
-    intrastat_code_id = fields.Many2one('report.intrastat.code',
-                                        string='Intrastat Code')
+    intrastat_code_id = fields.Many2one(
+        comodel_name='report.intrastat.code',
+        string='Intrastat Code')
     intrastat_type = fields.Selection(
-        [
+        selection=[
             ('good', 'Good'),
             ('service', 'Service'),
             ('misc', 'Miscellaneous'),
-            ('exclude', 'Exclude')
-        ],
+            ('exclude', 'Exclude')],
         string='Intrastat Type')
 
     def get_intrastat_data(self):
-        '''
-        It Returns the intrastat code with the following priority:
+        """
+        The intrastat code with the following priority:
+
         - Intrastat Code on product template
         - Intrastat Code on product category
-        '''
+        """
         res = {
             'intrastat_code_id': False,
             'intrastat_type': False
