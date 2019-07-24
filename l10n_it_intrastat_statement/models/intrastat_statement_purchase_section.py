@@ -13,7 +13,7 @@ class IntrastatStatementPurchaseSection(models.AbstractModel):
                    "common to all intrastat purchase sections"
 
     amount_currency = fields.Integer(
-        string='Amount Currency',
+        string="Amount Currency",
         digits=dp.get_precision('Account'))
 
     @api.model
@@ -45,31 +45,41 @@ class IntrastatStatementPurchaseSection(models.AbstractModel):
 class IntrastatStatementPurchaseSection1(models.Model):
     _inherit = 'account.intrastat.statement.purchase.section'
     _name = 'account.intrastat.statement.purchase.section1'
-    _description = 'Account INTRASTAT - Statement - Purchase Section 1'
+    _description = "Account INTRASTAT - Statement - Purchase Section 1"
 
     transation_nature_id = fields.Many2one(
-        'account.intrastat.transation.nature', string='Transation Nature')
-    weight_kg = fields.Integer(string='Weight kg')
-    additional_units = fields.Integer(string='Additional Units')
+        comodel_name='account.intrastat.transation.nature',
+        string="Transation Nature")
+    weight_kg = fields.Integer(
+        string="Weight kg")
+    additional_units = fields.Integer(
+        string="Additional Units")
     additional_units_required = fields.Boolean(
-        string='Additional Units Required', store=True,
+        string="Additional Units Required",
+        store=True,
         related='intrastat_code_id.additional_unit_required')
     additional_units_uom = fields.Char(
-        string='Additional Units UOM',
+        string="Additional Units UOM",
         readonly=True,
-        related="intrastat_code_id.additional_unit_uom_id.name")
-    statistic_amount_euro = fields.Integer(string='Statistic Amount Euro',
-                                           digits=dp.get_precision('Account'))
-    delivery_code_id = fields.Many2one('account.incoterms',
-                                       string='Delivery')
-    transport_code_id = fields.Many2one('account.intrastat.transport',
-                                        string='Transport')
-    country_origin_id = fields.Many2one('res.country',
-                                        string='Country Origin')
-    country_good_origin_id = fields.Many2one('res.country',
-                                             string='Country Good Origin')
-    province_destination_id = fields.Many2one('res.country.state',
-                                              string='Province Destination')
+        related='intrastat_code_id.additional_unit_uom_id.name')
+    statistic_amount_euro = fields.Integer(
+        string="Statistic Amount Euro",
+        digits=dp.get_precision('Account'))
+    delivery_code_id = fields.Many2one(
+        comodel_name='account.incoterms',
+        string="Delivery")
+    transport_code_id = fields.Many2one(
+        comodel_name='account.intrastat.transport',
+        string="Transport")
+    country_origin_id = fields.Many2one(
+        comodel_name='res.country',
+        string="Country Origin")
+    country_good_origin_id = fields.Many2one(
+        comodel_name='res.country',
+        string="Country Good Origin")
+    province_destination_id = fields.Many2one(
+        comodel_name='res.country.state',
+        string="Province Destination")
 
     @api.onchange('weight_kg')
     def change_weight_kg(self):
@@ -177,19 +187,25 @@ class IntrastatStatementPurchaseSection1(models.Model):
 class IntrastatStatementPurchaseSection2(models.Model):
     _inherit = 'account.intrastat.statement.purchase.section'
     _name = 'account.intrastat.statement.purchase.section2'
-    _description = 'Account INTRASTAT - Statement - Purchase Section 2'
+    _description = "Account INTRASTAT - Statement - Purchase Section 2"
 
-    month = fields.Integer(string='Month Ref of Refund')
-    quarterly = fields.Integer(string='Quarterly Ref of Refund')
-    year_id = fields.Integer(string='Year Ref of Refund')
-    sign_variation = fields.Selection([
-        ('+', '+'),
-        ('-', '-'),
-    ], 'Sign Variation')
+    month = fields.Integer(
+        string="Month Ref of Refund")
+    quarterly = fields.Integer(
+        string="Quarterly Ref of Refund")
+    year_id = fields.Integer(
+        string="Year Ref of Refund")
+    sign_variation = fields.Selection(
+        selection=[
+            ('+', "+"),
+            ('-', "-")],
+        string="Sign Variation")
     transation_nature_id = fields.Many2one(
-        'account.intrastat.transation.nature', string='Transation Nature')
-    statistic_amount_euro = fields.Integer(string='Statistic Amount Euro',
-                                           digits=dp.get_precision('Account'))
+        comodel_name='account.intrastat.transation.nature',
+        string="Transation Nature")
+    statistic_amount_euro = fields.Integer(
+        string='Statistic Amount Euro',
+        digits=dp.get_precision('Account'))
 
     @api.model
     def _prepare_statement_line(self, inv_intra_line, statement_id=None):
@@ -237,18 +253,18 @@ class IntrastatStatementPurchaseSection2(models.Model):
             ._export_line_checks(section_number)
         if not self.year_id:
             raise ValidationError(
-                _('Missing Year Ref on Purchase Section 2'))
+                _("Missing Year Ref on Purchase Section 2"))
         if not self.sign_variation:
             raise ValidationError(
-                _('Missing Sign Variation on Purchase Section 2'))
+                _("Missing Sign Variation on Purchase Section 2"))
         if self.statement_id.period_type == 'M':
             if not self.month:
                 raise ValidationError(
-                    _('Missing Month Ref Variation on Purchase Section 2'))
+                    _("Missing Month Ref Variation on Purchase Section 2"))
         elif self.statement_id.period_type == 'T':
             if not self.quarterly:
                 raise ValidationError(
-                    _('Missing Quarterly Ref Variation on Purchase Section 2'))
+                    _("Missing Quarterly Ref Variation on Purchase Section 2"))
 
     @api.multi
     def _prepare_export_line(self):
@@ -305,20 +321,26 @@ class IntrastatStatementPurchaseSection2(models.Model):
 class IntrastatStatementPurchaseSection3(models.Model):
     _inherit = 'account.intrastat.statement.purchase.section'
     _name = 'account.intrastat.statement.purchase.section3'
-    _description = 'Account INTRASTAT - Statement - Purchase Section 3'
+    _description = "Account INTRASTAT - Statement - Purchase Section 3"
 
-    invoice_number = fields.Char(string='Invoice Number')
-    invoice_date = fields.Date(string='Invoice Date')
-    supply_method = fields.Selection([
-        ('I', 'Instant'),
-        ('R', 'Repeatedly'),
-    ], 'Supply Method')
-    payment_method = fields.Selection([
-        ('B', 'Transfer'),
-        ('A', 'Accreditation'),
-        ('X', 'Other'),
-    ], 'Payment Method')
-    country_payment_id = fields.Many2one('res.country', 'Country Payment')
+    invoice_number = fields.Char(
+        string="Invoice Number")
+    invoice_date = fields.Date(
+        string="Invoice Date")
+    supply_method = fields.Selection(
+        selection=[
+            ('I', "Instant"),
+            ('R', "Repeatedly")],
+        string="Supply Method")
+    payment_method = fields.Selection(
+        selection=[
+            ('B', "Transfer"),
+            ('A', "Accreditation"),
+            ('X', "Other")],
+        string="Payment Method")
+    country_payment_id = fields.Many2one(
+        comodel_name='res.country',
+        string="Country Payment")
 
     @api.model
     def _prepare_statement_line(self, inv_intra_line, statement_id=None):
@@ -373,28 +395,42 @@ class IntrastatStatementPurchaseSection3(models.Model):
 class IntrastatStatementPurchaseSection4(models.Model):
     _inherit = 'account.intrastat.statement.purchase.section'
     _name = 'account.intrastat.statement.purchase.section4'
-    _description = 'Account INTRASTAT - Statement - Purchase Section 4'
+    _description = "Account INTRASTAT - Statement - Purchase Section 4"
 
-    intrastat_custom_id = fields.Many2one('account.intrastat.custom', 'Custom')
-    month = fields.Integer(string='Month Ref of Refund')
-    quarterly = fields.Integer(string='Quarterly Ref of Refund')
-    year_id = fields.Integer(string='Year Ref of Variation')
-    protocol = fields.Integer(string='Protocol number', size=6)
+    intrastat_custom_id = fields.Many2one(
+        comodel_name='account.intrastat.custom',
+        string="Custom")
+    month = fields.Integer(
+        string="Month Ref of Refund")
+    quarterly = fields.Integer(
+        string="Quarterly Ref of Refund")
+    year_id = fields.Integer(
+        string="Year Ref of Variation")
+    protocol = fields.Integer(
+        string="Protocol number",
+        size=6)
     progressive_to_modify_id = fields.Many2one(
-        'account.intrastat.statement.purchase.section1')
-    progressive_to_modify = fields.Integer('Progressive to Modify')
-    invoice_number = fields.Char(string='Invoice Number')
-    invoice_date = fields.Char(string='Invoice Date')
-    supply_method = fields.Selection([
-        ('I', 'Instant'),
-        ('R', 'Repeatedly'),
-    ], 'Supply Method')
-    payment_method = fields.Selection([
-        ('B', 'Transfer'),
-        ('A', 'Accreditation'),
-        ('X', 'Other'),
-    ], 'Payment Method')
-    country_payment_id = fields.Many2one('res.country', 'Country Payment')
+        comodel_name='account.intrastat.statement.purchase.section1')
+    progressive_to_modify = fields.Integer(
+        string="Progressive to Modify")
+    invoice_number = fields.Char(
+        string="Invoice Number")
+    invoice_date = fields.Char(
+        string="Invoice Date")
+    supply_method = fields.Selection(
+        selection=[
+            ('I', "Instant"),
+            ('R', "Repeatedly")],
+        string="Supply Method")
+    payment_method = fields.Selection(
+        selection=[
+            ('B', "Transfer"),
+            ('A', "Accreditation"),
+            ('X', "Other")],
+        string="Payment Method")
+    country_payment_id = fields.Many2one(
+        comodel_name='res.country',
+        string="Country Payment")
 
     @api.model
     def _prepare_statement_line(self, inv_intra_line, statement_id=None):
@@ -423,28 +459,28 @@ class IntrastatStatementPurchaseSection4(models.Model):
             ._export_line_checks(section_number)
         if not self.year_id:
             raise ValidationError(
-                _('Missing Year Ref on Purchase Section 4'))
+                _("Missing Year Ref on Purchase Section 4"))
         if not self.intrastat_custom_id:
             raise ValidationError(
-                _('Missing custom on Purchase Section 4'))
+                _("Missing custom on Purchase Section 4"))
         if not self.protocol:
             raise ValidationError(
-                _('Missing protocol on Purchase Section 4'))
+                _("Missing protocol on Purchase Section 4"))
         if not self.progressive_to_modify:
             raise ValidationError(
-                _('Missing Progressive to modity on Purchase Section 4'))
+                _("Missing Progressive to modity on Purchase Section 4"))
         if (not self.invoice_number) or (not self.invoice_date):
             raise ValidationError(
-                _('Missing Invoice data on Purchase Section 4'))
+                _("Missing Invoice data on Purchase Section 4"))
         if not self.supply_method:
             raise ValidationError(
-                _('Missing Supply method on Purchase Section 4'))
+                _("Missing Supply method on Purchase Section 4"))
         if not self.payment_method:
             raise ValidationError(
-                _('Missing Payment method on Purchase Section 4'))
+                _("Missing Payment method on Purchase Section 4"))
         if not self.country_payment_id:
             raise ValidationError(
-                _('Missing Country Payment on Purchase Section 4'))
+                _("Missing Country Payment on Purchase Section 4"))
 
     @api.multi
     def _prepare_export_line(self):

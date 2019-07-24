@@ -1,3 +1,6 @@
+# Copyright 2019 Simone Rubino - Agile Business Group
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+
 from odoo import models, fields, api, _
 import odoo.addons.decimal_precision as dp
 from odoo.tools import float_is_zero
@@ -7,7 +10,8 @@ from odoo.exceptions import UserError
 class AccountFiscalPosition(models.Model):
     _inherit = 'account.fiscal.position'
 
-    intrastat = fields.Boolean(string="Subject to Intrastat")
+    intrastat = fields.Boolean(
+        string="Subject to Intrastat")
 
 
 class AccountInvoiceLine(models.Model):
@@ -21,53 +25,195 @@ class AccountInvoiceLine(models.Model):
         product_template = self.product_id.product_tmpl_id
 
         # Code competence
-        intrastat_data = product_template.get_intrastat_data()
-        intrastat_code_model = self.env['report.intrastat.code']
-        intrastat_code = intrastat_code_model.browse()
-        if intrastat_data['intrastat_code_id']:
-            intrastat_code = intrastat_code_model.browse(
-                intrastat_data['intrastat_code_id'])
-        res.update({
-            'intrastat_code_id': intrastat_data['intrastat_code_id']})
+        intrastat_code, intrastat_data = self._prepare_intrastat_line_code(
+            product_template, res)
 
         # Type
         res.update({
             'intrastat_code_type': intrastat_data['intrastat_type']})
 
         # Amount
-        amount_currency = self.price_subtotal
-        company_currency = self.invoice_id.company_id.currency_id
-        invoice_currency = self.invoice_id.currency_id
-        amount_euro = invoice_currency._convert(
-            amount_currency,
-            company_currency,
-            self.invoice_id.company_id,
-            fields.Date.today())
-        statistic_amount_euro = amount_euro
-        res.update({
-            'amount_currency': amount_currency,
-            'amount_euro': amount_euro,
-            'statistic_amount_euro': statistic_amount_euro})
+        self._prepare_intrastat_line_amount(res)
 
         # Weight
-        intrastat_uom_kg = self.invoice_id.company_id.intrastat_uom_kg_id
-        # ...Weight compute in Kg
-        # ...If Uom has the same category of kg -> Convert to Kg
-        # ...Else the weight will be product weight * qty
-
-        product_weight = product_template.weight or 0
-        if intrastat_uom_kg and \
-                product_template.uom_id.category_id \
-                == intrastat_uom_kg.category_id:
-            weight_kg = self.uom_id._compute_quantity(
-                qty=self.quantity,
-                to_unit=intrastat_uom_kg)
-        else:
-            weight_kg = self.quantity * product_weight
-        res.update({
-            'weight_kg': weight_kg})
+        weight_kg = self._prepare_intrastat_line_weight(product_template, res)
 
         # Additional Units
+        self._prepare_intrastat_line_additional_units(
+            company_id, intrastat_code, res, weight_kg)
+
+        # Transport
+        self._prepare_intrastat_line_transport(company_id, res)
+
+        # Transation
+        self._prepare_intrastat_line_transation(company_id, res)
+
+        # Delivery
+        self._prepare_intrastat_line_delivery(company_id, res)
+
+        # ---------
+        # Origin
+        # ---------
+        # Country Origin
+        self._prepare_intrastat_line_country_origin(res)
+
+        # Country Good Origin
+        self._prepare_intrastat_line_country_good_origin(res)
+
+        # Province Origin
+        self._prepare_intrastat_line_province_origin(company_id, res)
+
+        # ---------
+        # Destination
+        # ---------
+        # Country Destination
+        self._prepare_intrastat_line_country_dest(res)
+
+        # Province Destination
+        self._prepare_intrastat_line_province_dest(company_id, res)
+
+        # Payment method
+        self._prepare_intrastat_line_payment(res)
+
+        # Country Payment
+        self._prepare_intrastat_line_country_payment(res)
+        return res
+
+    @api.multi
+    def _prepare_intrastat_line_country_payment(self, res):
+        self.ensure_one()
+        country_payment_id = self.env['res.country'].browse()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            country_payment_id = \
+                self.invoice_id.partner_id.country_id
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            country_payment_id = \
+                self.invoice_id.company_id.partner_id.country_id
+        res.update({
+            'country_payment_id': country_payment_id.id})
+
+    @api.multi
+    def _prepare_intrastat_line_payment(self, res):
+        self.ensure_one()
+        payment_method = False
+        if self.invoice_id.payment_term_id \
+                and self.invoice_id.payment_term_id.intrastat_code:
+            payment_method = self.invoice_id.payment_term_id.intrastat_code
+        res.update({
+            'payment_method': payment_method})
+
+    @api.multi
+    def _prepare_intrastat_line_province_dest(self, company_id, res):
+        self.ensure_one()
+        province_destination_id = self.env['res.country.state'].browse()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            province_destination_id = \
+                self.invoice_id.partner_id.state_id
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            province_destination_id = \
+                company_id.intrastat_purchase_province_destination_id \
+                or self.invoice_id.company_id.partner_id.state_id
+        res.update({
+            'province_destination_id': province_destination_id.id})
+
+    @api.multi
+    def _prepare_intrastat_line_country_dest(self, res):
+        self.ensure_one()
+        country_destination_id = self.env['res.country'].browse()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            country_destination_id = \
+                self.invoice_id.partner_id.country_id
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            country_destination_id = \
+                self.invoice_id.company_id.partner_id.country_id
+        res.update({
+            'country_destination_id': country_destination_id.id})
+
+    @api.multi
+    def _prepare_intrastat_line_province_origin(self, company_id, res):
+        self.ensure_one()
+        province_origin_id = self.env['res.country.state'].browse()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            province_origin_id = \
+                company_id.intrastat_sale_province_origin_id \
+                or company_id.partner_id.state_id
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            province_origin_id = \
+                self.invoice_id.partner_id.state_id
+        res.update({
+            'province_origin_id': province_origin_id.id})
+
+    @api.multi
+    def _prepare_intrastat_line_country_good_origin(self, res):
+        self.ensure_one()
+        country_good_origin_id = self.env['res.country'].browse()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            country_good_origin_id = \
+                self.invoice_id.company_id.partner_id.country_id
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            country_good_origin_id = \
+                self.invoice_id.partner_id.country_id
+        res.update({
+            'country_good_origin_id': country_good_origin_id.id})
+
+    @api.multi
+    def _prepare_intrastat_line_country_origin(self, res):
+        self.ensure_one()
+        country_origin_id = self.env['res.country'].browse()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            country_origin_id = \
+                self.invoice_id.company_id.partner_id.country_id
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            country_origin_id = \
+                self.invoice_id.partner_id.country_id
+        res.update({'country_origin_id': country_origin_id.id})
+
+    @api.multi
+    def _prepare_intrastat_line_delivery(self, company_id, res):
+        self.ensure_one()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            res.update({
+                'delivery_code_id':
+                    company_id.intrastat_sale_delivery_code_id
+            })
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            res.update({
+                'delivery_code_id':
+                    company_id.intrastat_purchase_delivery_code_id
+            })
+
+    @api.multi
+    def _prepare_intrastat_line_transation(self, company_id, res):
+        self.ensure_one()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            res.update({
+                'transation_nature_id':
+                    company_id.intrastat_sale_transation_nature_id
+            })
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            res.update({
+                'transation_nature_id':
+                    company_id.intrastat_purchase_transation_nature_id
+            })
+
+    @api.multi
+    def _prepare_intrastat_line_transport(self, company_id, res):
+        self.ensure_one()
+        if self.invoice_id.type in ('out_invoice', 'out_refund'):
+            res.update({
+                'transport_code_id':
+                    company_id.intrastat_sale_transport_code_id.id
+            })
+        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
+            res.update({
+                'transport_code_id':
+                    company_id.intrastat_purchase_transport_code_id.id
+            })
+
+    @api.multi
+    def _prepare_intrastat_line_additional_units(
+            self, company_id, intrastat_code, res, weight_kg):
+        self.ensure_one()
         additional_units = False
         # Priority : 1. Intrastat Code  2. Company
         if intrastat_code.additional_unit_from:
@@ -83,123 +229,55 @@ class AccountInvoiceLine(models.Model):
         res.update({
             'additional_units': additional_units})
 
-        # Transport
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            res.update({
-                'transport_code_id':
-                    company_id.intrastat_sale_transport_code_id.id
-            })
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            res.update({
-                'transport_code_id':
-                    company_id.intrastat_purchase_transport_code_id.id
-            })
-
-        # Transation
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            res.update({
-                'transation_nature_id':
-                    company_id.intrastat_sale_transation_nature_id
-            })
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            res.update({
-                'transation_nature_id':
-                    company_id.intrastat_purchase_transation_nature_id
-            })
-
-        # Delivery
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            res.update({
-                'delivery_code_id':
-                    company_id.intrastat_sale_delivery_code_id
-            })
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            res.update({
-                'delivery_code_id':
-                    company_id.intrastat_purchase_delivery_code_id
-            })
-
-        # ---------
-        # Origin
-        # ---------
-        # Country Origin
-        country_origin_id = self.env['res.country'].browse()
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            country_origin_id = \
-                self.invoice_id.company_id.partner_id.country_id
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            country_origin_id = \
-                self.invoice_id.partner_id.country_id
-        res.update({'country_origin_id': country_origin_id.id})
-
-        # Country Good Origin
-        country_good_origin_id = self.env['res.country'].browse()
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            country_good_origin_id = \
-                self.invoice_id.company_id.partner_id.country_id
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            country_good_origin_id = \
-                self.invoice_id.partner_id.country_id
+    @api.multi
+    def _prepare_intrastat_line_weight(self, product_template, res):
+        self.ensure_one()
+        intrastat_uom_kg = self.invoice_id.company_id.intrastat_uom_kg_id
+        # ...Weight compute in Kg
+        # ...If Uom has the same category of kg -> Convert to Kg
+        # ...Else the weight will be product weight * qty
+        product_weight = product_template.weight or 0
+        if intrastat_uom_kg and \
+                product_template.uom_id.category_id \
+                == intrastat_uom_kg.category_id:
+            weight_kg = self.uom_id._compute_quantity(
+                qty=self.quantity,
+                to_unit=intrastat_uom_kg)
+        else:
+            weight_kg = self.quantity * product_weight
         res.update({
-            'country_good_origin_id': country_good_origin_id.id})
+            'weight_kg': weight_kg})
+        return weight_kg
 
-        # Province Origin
-        province_origin_id = self.env['res.country.state'].browse()
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            province_origin_id = \
-                company_id.intrastat_sale_province_origin_id \
-                or company_id.partner_id.state_id
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            province_origin_id = \
-                self.invoice_id.partner_id.state_id
+    @api.multi
+    def _prepare_intrastat_line_code(self, product_template, res):
+        self.ensure_one()
+        intrastat_data = product_template.get_intrastat_data()
+        intrastat_code_model = self.env['report.intrastat.code']
+        intrastat_code = intrastat_code_model.browse()
+        if intrastat_data['intrastat_code_id']:
+            intrastat_code = intrastat_code_model.browse(
+                intrastat_data['intrastat_code_id'])
         res.update({
-            'province_origin_id': province_origin_id.id})
+            'intrastat_code_id': intrastat_data['intrastat_code_id']})
+        return intrastat_code, intrastat_data
 
-        # ---------
-        # Destination
-        # ---------
-        # Country Destination
-        country_destination_id = self.env['res.country'].browse()
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            country_destination_id = \
-                self.invoice_id.partner_id.country_id
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            country_destination_id = \
-                self.invoice_id.company_id.partner_id.country_id
+    @api.multi
+    def _prepare_intrastat_line_amount(self, res):
+        self.ensure_one()
+        amount_currency = self.price_subtotal
+        company_currency = self.invoice_id.company_id.currency_id
+        invoice_currency = self.invoice_id.currency_id
+        amount_euro = invoice_currency._convert(
+            amount_currency,
+            company_currency,
+            self.invoice_id.company_id,
+            fields.Date.today())
+        statistic_amount_euro = amount_euro
         res.update({
-            'country_destination_id': country_destination_id.id})
-
-        # Province Destination
-        province_destination_id = self.env['res.country.state'].browse()
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            province_destination_id = \
-                self.invoice_id.partner_id.state_id
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            province_destination_id = \
-                company_id.intrastat_purchase_province_destination_id \
-                or self.invoice_id.company_id.partner_id.state_id
-        res.update({
-            'province_destination_id': province_destination_id.id})
-
-        # Payment method
-        payment_method = False
-        if self.invoice_id.payment_term_id \
-                and self.invoice_id.payment_term_id.intrastat_code:
-            payment_method = self.invoice_id.payment_term_id.intrastat_code
-        res.update({
-            'payment_method': payment_method})
-
-        # Country Payment
-        country_payment_id = self.env['res.country'].browse()
-        if self.invoice_id.type in ('out_invoice', 'out_refund'):
-            country_payment_id = \
-                self.invoice_id.partner_id.country_id
-        elif self.invoice_id.type in ('in_invoice', 'in_refund'):
-            country_payment_id = \
-                self.invoice_id.company_id.partner_id.country_id
-        res.update({
-            'country_payment_id': country_payment_id.id})
-        return res
+            'amount_currency': amount_currency,
+            'amount_euro': amount_euro,
+            'statistic_amount_euro': statistic_amount_euro})
 
 
 class AccountInvoice(models.Model):
@@ -214,7 +292,7 @@ class AccountInvoice(models.Model):
     intrastat_line_ids = fields.One2many(
         comodel_name='account.invoice.intrastat',
         inverse_name='invoice_id',
-        string='Intrastat',
+        string="Intrastat",
         readonly=True,
         states={
             'draft': [
@@ -231,6 +309,8 @@ class AccountInvoice(models.Model):
             if not invoice.intrastat_line_ids:
                 invoice.compute_intrastat_lines()
         super().action_move_create()
+        precision_digits = self.env['decimal.precision'] \
+            .precision_get('Account')
         for invoice in self:
             if invoice.intrastat:
                 # Calcolo l'importo delle righe di fattura che hanno i prodotti
@@ -245,15 +325,13 @@ class AccountInvoice(models.Model):
 
                 total_amount = sum(
                     l.amount_currency for l in invoice.intrastat_line_ids)
-                precision_digits = self.env[
-                    'decimal.precision'].precision_get('Account')
                 subtotal = abs(invoice.amount_untaxed - excluded_amount)
                 if not float_is_zero(
                     total_amount - subtotal,
                     precision_digits=precision_digits
                 ):
-                    raise UserError(_('Total Intrastat must be ugual to\
-                        Total Invoice Untaxed'))
+                    raise UserError(_("Total Intrastat must be equal to\
+                        Total Invoice Untaxed"))
         return True
 
     @api.multi
@@ -383,19 +461,25 @@ class AccountInvoiceIntrastat(models.Model):
                 if line.invoice_id.date_invoice:
                     line.invoice_date = line.invoice_id.date_invoice
 
+    @api.multi
+    @api.depends('invoice_id.type', 'intrastat_code_type')
     def _get_statement_section(self):
         """
         Compute where the invoice intrastat data will be computed.
         This field is used to show the right values to fill in
         """
-        invoice_type = self.env.context.get('invoice_type')
-        intrastat_code_type = self.env.context.get('intrastat_code_type')
-        if not invoice_type:
-            invoice_type = self.invoice_id.type
-        if not intrastat_code_type:
-            intrastat_code_type = self.intrastat_code_type
-        section = False
+        invoice_type_ctx = self.env.context.get('invoice_type')
+        intrastat_code_type_ctx = self.env.context.get('intrastat_code_type')
+        for statement in self:
+            invoice_type = invoice_type_ctx or statement.invoice_id.type
+            intrastat_code_type = \
+                intrastat_code_type_ctx or statement.intrastat_code_type
+            statement.statement_section = self.compute_statement_section(
+                intrastat_code_type, invoice_type)
 
+    @api.model
+    def compute_statement_section(self, intrastat_code_type, invoice_type):
+        section = False
         # Purchase
         if invoice_type in ('in_invoice', 'in_refund'):
             if intrastat_code_type == 'good':
@@ -422,6 +506,7 @@ class AccountInvoiceIntrastat(models.Model):
                     section = 'sale_s4'
         return section
 
+    @api.model
     def _get_partner_data(self, partner):
         """
         Data default from partner
@@ -437,120 +522,120 @@ class AccountInvoiceIntrastat(models.Model):
 
     invoice_id = fields.Many2one(
         comodel_name='account.invoice',
-        string='Invoice',
+        string="Invoice",
         required=True)
     partner_id = fields.Many2one(
-        string='Partner',
+        string="Partner",
         readonly=True,
         related="invoice_id.partner_id",
         store=True)
 
     intrastat_type_data = fields.Selection(
         selection=[
-            ('all', 'All (Fiscal and Statistic)'),
-            ('fiscal', 'Fiscal'),
-            ('statistic', 'Statistic')],
-        string='Data Type',
+            ('all', "All (Fiscal and Statistic)"),
+            ('fiscal', "Fiscal"),
+            ('statistic', "Statistic")],
+        string="Data Type",
         default='all',
         required=True)
     intrastat_code_type = fields.Selection(
         selection=[
-            ('service', 'Service'),
-            ('good', 'Good')],
-        string='Code Type',
+            ('service', "Service"),
+            ('good', "Good")],
+        string="Code Type",
         required=True,
         default='good')
     intrastat_code_id = fields.Many2one(
         comodel_name='report.intrastat.code',
-        string='Intrastat Code',
+        string="Intrastat Code",
         required=True)
     statement_section = fields.Selection(
         selection=[
-            ('sale_s1', 'Sale s1'),
-            ('sale_s2', 'Sale s2'),
-            ('sale_s3', 'Sale s3'),
-            ('sale_s4', 'Sale s4'),
-            ('purchase_s1', 'Purchase s1'),
-            ('purchase_s2', 'Purchase s2'),
-            ('purchase_s3', 'Purchase s3'),
-            ('purchase_s4', 'Purchase s4')],
-        string='Statement Section',
-        default=_get_statement_section)
+            ('sale_s1', "Sale s1"),
+            ('sale_s2', "Sale s2"),
+            ('sale_s3', "Sale s3"),
+            ('sale_s4', "Sale s4"),
+            ('purchase_s1', "Purchase s1"),
+            ('purchase_s2', "Purchase s2"),
+            ('purchase_s3', "Purchase s3"),
+            ('purchase_s4', "Purchase s4")],
+        string="Statement Section",
+        compute='_get_statement_section')
 
     amount_euro = fields.Float(
-        string='Amount Euro',
+        string="Amount Euro",
         compute='_compute_amount_euro',
         digits=dp.get_precision('Account'),
         store=True,
         readonly=True)
     amount_currency = fields.Float(
-        string='Amount Currency',
+        string="Amount Currency",
         digits=dp.get_precision('Account'))
     transation_nature_id = fields.Many2one(
         comodel_name='account.intrastat.transation.nature',
-        string='Transation Nature')
+        string="Transation Nature")
     weight_kg = fields.Float(
-        string='Weight kg')
+        string="Weight kg")
     additional_units = fields.Float(
-        string='Additional Units')
+        string="Additional Units")
     additional_units_uom = fields.Char(
-        string='Additional Units UOM',
+        string="Additional Units UOM",
         readonly=True,
         related="intrastat_code_id.additional_unit_uom_id.name")
     statistic_amount_euro = fields.Float(
-        string='Statistic Amount Euro',
+        string="Statistic Amount Euro",
         digits=dp.get_precision('Account'))
     country_partner_id = fields.Many2one(
         comodel_name='res.country',
-        string='Country Partner',
+        string="Country Partner",
         compute='_compute_partner_data',
         store=True,
         readonly=True)
     # Origin 
     province_origin_id = fields.Many2one(
         comodel_name='res.country.state',
-        string='Province Origin')
+        string="Province Origin")
     country_origin_id = fields.Many2one(
         comodel_name='res.country',
-        string='Country Origin')
+        string="Country Origin")
     country_good_origin_id = fields.Many2one(
         comodel_name='res.country',
-        string='Country Goods Origin')
+        string="Country Goods Origin")
     delivery_code_id = fields.Many2one(
         comodel_name='account.incoterms',
-        string='Delivery')
+        string="Delivery")
     transport_code_id = fields.Many2one(
         comodel_name='account.intrastat.transport',
-        string='Transport')
+        string="Transport")
     # Destination
     province_destination_id = fields.Many2one(
         comodel_name='res.country.state',
-        string='province destination')
+        string="province destination")
     country_destination_id = fields.Many2one(
         comodel_name='res.country',
-        string='Country Destination')
+        string="Country Destination")
     invoice_number = fields.Char(
-        string='Invoice Number',
+        string="Invoice Number",
         compute='_compute_invoice_ref',
         store=True)
     invoice_date = fields.Date(
-        string='Invoice Date',
+        string="Invoice Date",
         compute='_compute_invoice_ref',
         store=True)
     supply_method = fields.Selection(
         selection=[
             ('I', 'Instant'),
             ('R', 'Repeatedly')],
-        string='Supply Method')
+        string="Supply Method")
     payment_method = fields.Selection(
         selection=[
-            ('B', 'Transfer'),
-            ('A', 'Accreditation'),
-            ('X', 'Other')],
-        string='Payment Method')
+            ('B', "Transfer"),
+            ('A', "Accreditation"),
+            ('X', "Other")],
+        string="Payment Method")
     country_payment_id = fields.Many2one(
         comodel_name='res.country',
-        string='Country Payment')
+        string="Country Payment")
 
     @api.onchange('weight_kg')
     def change_weight_kg(self):
@@ -573,7 +658,7 @@ class AccountPaymentTerm(models.Model):
 
     intrastat_code = fields.Selection(
         selection=[
-            ('B', 'Transfer'),
-            ('A', 'Accreditation'),
-            ('X', 'Other')],
+            ('B', "Transfer"),
+            ('A', "Accreditation"),
+            ('X', "Other")],
         string="Payment Method")

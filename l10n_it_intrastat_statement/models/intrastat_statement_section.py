@@ -12,29 +12,29 @@ class IntrastatStatementPurchaseSection(models.AbstractModel):
 
     statement_id = fields.Many2one(
         comodel_name='account.intrastat.statement',
-        string='Statement',
+        string="Statement",
         readonly=True,
         ondelete='cascade')
     sequence = fields.Integer(
-        string='Progressive')
+        string="Progressive")
     partner_id = fields.Many2one(
         comodel_name='res.partner',
-        string='Partner')
+        string="Partner")
     country_partner_id = fields.Many2one(
         comodel_name='res.country',
-        string='Country Partner')
+        string="Country Partner")
     vat_code = fields.Char(
-        string='Vat Code Partner')
+        string="Vat Code Partner")
     amount_euro = fields.Integer(
-        string='Amount Euro',
+        string="Amount Euro",
         digits=dp.get_precision('Account'))
     invoice_id = fields.Many2one(
         comodel_name='account.invoice',
-        string='Invoice',
+        string="Invoice",
         readonly=True)
     intrastat_code_id = fields.Many2one(
         comodel_name='report.intrastat.code',
-        string='Intrastat Code Good')
+        string="Intrastat Code Good")
 
     @api.multi
     def apply_partner_data(self, partner_data):
@@ -80,7 +80,7 @@ class IntrastatStatementPurchaseSection(models.AbstractModel):
         self.ensure_one()
         if not self.vat_code:
             raise ValidationError(
-                _('Missing Vat code for %s in %s Section %s')
+                _("Missing Vat code for %s in %s Section %s")
                 % (self.partner_id.display_name,
                    section_label,
                    section_number))
@@ -88,7 +88,7 @@ class IntrastatStatementPurchaseSection(models.AbstractModel):
         if country_id:
             country_id.intrastat_validate()
         else:
-            raise ValidationError(_('Partner %s without Country')
+            raise ValidationError(_("Partner %s without Country")
                                   % self.partner_id.display_name)
 
     @api.multi

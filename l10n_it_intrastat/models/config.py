@@ -1,3 +1,6 @@
+# Copyright 2019 Simone Rubino - Agile Business Group
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+
 from odoo import models, fields
 
 
@@ -29,31 +32,39 @@ class ResCompany(models.Model):
         string="File name for export")
 
     # default values sale section
-    intrastat_sale_statistic_amount = fields.Boolean()
+    intrastat_sale_statistic_amount = fields.Boolean(
+        string="Intrastat Sale: Statistic amount")
     intrastat_sale_transation_nature_id = fields.Many2one(
+        string="Intrastat Sale: Transation nature",
         comodel_name='account.intrastat.transation.nature')
     intrastat_sale_delivery_code_id = fields.Many2one(
+        string="Intrastat Sale: Delivery code",
         comodel_name='account.incoterms')
     intrastat_sale_transport_code_id = fields.Many2one(
+        string="Intrastat Sale: Transport code",
         comodel_name='account.intrastat.transport')
     intrastat_sale_province_origin_id = fields.Many2one(
-        comodel_name='res.country.state',
-        string='Province Origin')
+        string="Intrastat Sale: Province origin",
+        comodel_name='res.country.state')
 
     # default values purchase section
-    intrastat_purchase_statistic_amount = fields.Boolean()
+    intrastat_purchase_statistic_amount = fields.Boolean(
+        string="Intrastat Purchase: Statistic amount")
     intrastat_purchase_transation_nature_id = fields.Many2one(
+        string="Intrastat Purchase: Transation nature",
         comodel_name='account.intrastat.transation.nature')
     intrastat_purchase_delivery_code_id = fields.Many2one(
+        string="Intrastat Purchase: Delivery code",
         comodel_name='account.incoterms')
     intrastat_purchase_transport_code_id = fields.Many2one(
+        string="Intrastat Purchase: Transport code",
         comodel_name='account.intrastat.transport')
     intrastat_purchase_province_destination_id = fields.Many2one(
-        comodel_name='res.country.state',
-        string='Province Destination')
+        string="Intrastat Purchase: Province destination",
+        comodel_name='res.country.state')
+
     intrastat_min_amount = fields.Float(
         string="Min amount",
         help="In case of invoices < 'min amount', "
              "use min amount in intrastat statement",
-        default=1.0
-    )
+        default=1.0)

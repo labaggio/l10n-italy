@@ -1,3 +1,6 @@
+# Copyright 2019 Simone Rubino - Agile Business Group
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from datetime import datetime, date, timedelta
@@ -9,7 +12,7 @@ from odoo.tools import float_round
 
 class AccountIntrastatStatement(models.Model):
     _name = 'account.intrastat.statement'
-    _description = 'Account INTRASTAT - Statement'
+    _description = "Account INTRASTAT - Statement"
     _rec_name = 'number'
 
     @api.multi
@@ -95,19 +98,15 @@ class AccountIntrastatStatement(models.Model):
     @api.multi
     def recompute_sequence_lines(self):
         for statement in self:
-            sections = [statement.sale_section1_ids,
-                        statement.sale_section2_ids,
-                        statement.sale_section3_ids,
-                        statement.sale_section4_ids,
-                        statement.purchase_section1_ids,
-                        statement.purchase_section2_ids,
-                        statement.purchase_section3_ids,
-                        statement.purchase_section4_ids]
-            for section in sections:
-                sequence = 1
-                for line in section:
-                    line.sequence = sequence
-                    sequence += 1
+            for section_type in ['purchase', 'sale']:
+                for section_number in range(1, 5):
+                    section_field = self.get_section_field_name(
+                        section_type, section_number)
+                    section = statement[section_field]
+                    sequence = 1
+                    for line in section:
+                        line.sequence = sequence
+                        sequence += 1
 
     @api.model
     def _get_sequence(self):
@@ -324,22 +323,22 @@ class AccountIntrastatStatement(models.Model):
         self.recompute_sequence_lines()
         return res
 
+    @api.multi
     @api.depends('fiscalyear', 'period_type', 'period_number')
     def _compute_dates(self):
-        if not self.fiscalyear \
-           or not self.period_type \
-           or not self.period_number:
-            return
+        for statement in self:
+            if not statement.fiscalyear \
+               or not statement.period_type \
+               or not statement.period_number:
+                continue
 
-        try:
-            self._constrain_period_number()
-        except ValidationError as ve:
-            return {'warning': {'message': ve.name}}
+            statement._constrain_period_number()
 
-        period_date_start, period_date_stop = self.get_dates_start_stop()
+            period_date_start, period_date_stop = \
+                statement.get_dates_start_stop()
 
-        self.date_start = fields.Date.to_date(period_date_start)
-        self.date_stop = fields.Date.to_date(period_date_stop)
+            statement.date_start = fields.Date.to_date(period_date_start)
+            statement.date_stop = fields.Date.to_date(period_date_stop)
 
     @api.multi
     def get_dates_start_stop(self):
@@ -612,8 +611,9 @@ class AccountIntrastatStatement(models.Model):
         rcd += "\r\n"
         return rcd
 
-    @api.model
+    @api.multi
     def generate_file_export(self):
+        self.ensure_one()
         file_content = ''
         # Head
         if not self.env.context.get('export_without_head'):
@@ -760,8 +760,8 @@ class AccountIntrastatStatement(models.Model):
 
         # Group refund to sale lines if they have the same period of ref
         refund_map = [
-            (2, 1),  # Sale (Purchase) section 2 refunds sale section 1
-            (4, 3),  # Sale (Purchase) section 4 refunds sale section 3
+            (2, 1),  # Sale (Purchase) section 2 refunds section 1
+            (4, 3),  # Sale (Purchase) section 4 refunds section 3
         ]
         for section_type in ['purchase', 'sale']:
             for section_number, refund_section_number in refund_map:

@@ -1,3 +1,6 @@
+# Copyright 2019 Simone Rubino - Agile Business Group
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+
 from odoo import models, fields
 
 
@@ -6,16 +9,16 @@ class ProductCategory(models.Model):
 
     intrastat_code_id = fields.Many2one(
         'report.intrastat.code',
-        string='Intrastat Code'
+        string="Intrastat Code"
     )
     intrastat_type = fields.Selection(
         [
-            ('good', 'Good'),
-            ('service', 'Service'),
-            ('misc', 'Miscellaneous'),
-            ('exclude', 'Exclude')
+            ('good', "Good"),
+            ('service', "Service"),
+            ('misc', "Miscellaneous"),
+            ('exclude', "Exclude")
         ],
-        string='Intrastat Type')
+        string="Intrastat Type")
 
 
 class ProductTemplate(models.Model):
@@ -23,14 +26,14 @@ class ProductTemplate(models.Model):
 
     intrastat_code_id = fields.Many2one(
         comodel_name='report.intrastat.code',
-        string='Intrastat Code')
+        string="Intrastat Code")
     intrastat_type = fields.Selection(
         selection=[
-            ('good', 'Good'),
-            ('service', 'Service'),
-            ('misc', 'Miscellaneous'),
-            ('exclude', 'Exclude')],
-        string='Intrastat Type')
+            ('good', "Good"),
+            ('service', "Service"),
+            ('misc', "Miscellaneous"),
+            ('exclude', "Exclude")],
+        string="Intrastat Type")
 
     def get_intrastat_data(self):
         """

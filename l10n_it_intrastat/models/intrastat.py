@@ -1,3 +1,6 @@
+# Copyright 2019 Simone Rubino - Agile Business Group
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 
@@ -10,9 +13,9 @@ class AccountIntrastatCustom(models.Model):
         size=6)
     name = fields.Char()
     date_start = fields.Date(
-        string='Date start')
+        string="Date start")
     date_stop = fields.Date(
-        string='Date stop')
+        string="Date stop")
 
 
 class ReportIntrastatCode(models.Model):
@@ -20,26 +23,26 @@ class ReportIntrastatCode(models.Model):
     _description = "Intrastat code"
 
     name = fields.Char(
-        string='Intrastat Code')
+        string="Intrastat Code")
     active = fields.Boolean(
         default=True)
     additional_unit_required = fields.Boolean(
-        string='Unit of Measure Additional Required')
+        string="Unit of Measure Additional Required")
     additional_unit_from = fields.Selection(
         selection=[
-            ('quantity', 'Quantity'),
-            ('weight', 'Weight'),
-            ('none', 'None')],
-        string='Additional Unit of Measure FROM')
+            ('quantity', "Quantity"),
+            ('weight', "Weight"),
+            ('none', "None")],
+        string="Additional Unit of Measure FROM")
     additional_unit_uom_id = fields.Many2one(
         comodel_name='uom.uom',
-        string='Unit of Measure Additional')
+        string="Unit of Measure Additional")
     type = fields.Selection(
         selection=[
-            ('good', 'Good'),
-            ('service', 'Service')])
+            ('good', "Good"),
+            ('service', "Service")])
     description = fields.Char(
-        string='Description',
+        string="Description",
         translate=True)
 
 
@@ -51,29 +54,29 @@ class ResCountry(models.Model):
         self.ensure_one()
         if not self.code:
             raise ValidationError(
-                _('Country %s without ISO code') % self.display_name)
+                _("Country %s without ISO code") % self.display_name)
         return True
 
 
 class AccountIntrastatTransport(models.Model):
     _name = 'account.intrastat.transport'
-    _description = 'Account INTRASTAT - Transport'
+    _description = "Account INTRASTAT - Transport"
 
     code = fields.Char(
-        string='Code',
+        string="Code",
         size=1,
         required=True)
     name = fields.Char(
-        string='Name')
+        string="Name")
 
 
 class AccountIntrastatTransationNature(models.Model):
     _name = 'account.intrastat.transation.nature'
-    _description = 'Account INTRASTAT - Transation Nature'
+    _description = "Account INTRASTAT - Transation Nature"
 
     code = fields.Char(
-        string='Code',
+        string="Code",
         size=1,
         required=True)
     name = fields.Char(
-        string='Name')
+        string="Name")
