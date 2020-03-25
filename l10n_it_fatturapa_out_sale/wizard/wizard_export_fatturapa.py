@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl).
+#  License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
-from openerp import models
+from odoo import models
 
-from openerp.addons.l10n_it_fatturapa.bindings.fatturapa_v_1_2 import (
+from odoo.addons.l10n_it_fatturapa.bindings.binding import (
     DatiDocumentiCorrelatiType,
 )
 

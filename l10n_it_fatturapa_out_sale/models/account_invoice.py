@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl).
+#  Copyright 2020 Simone Rubino - Agile Business Group
+#  License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
-from openerp import fields, models
+from odoo import fields, models
 
 
 class AccountInvoice(models.Model):
