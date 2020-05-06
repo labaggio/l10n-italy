@@ -191,7 +191,6 @@ class WizardImportFatturapa(models.TransientModel):
                 electronic_invoice_no_contact_update
         fiscalPosModel = self.env['fatturapa.fiscal_position']
         if partner_id and not no_contact_update:
-            partner_company_id = partner_model.browse(partner_id).company_id.id
             vals = {
                 'street': cedPrest.Sede.Indirizzo,
                 'zip': cedPrest.Sede.CAP,
@@ -241,10 +240,8 @@ class WizardImportFatturapa(models.TransientModel):
             if cedPrest.IscrizioneREA:
                 REA = cedPrest.IscrizioneREA
                 offices = self.ProvinceByCode(REA.Ufficio)
-                rea_nr = REA.NumeroREA
 
                 if not offices:
-                    office_id = False
                     self.log_inconsistency(
                         _(
                             'REA Office Province Code ( %s ) not present in '
@@ -255,27 +252,7 @@ class WizardImportFatturapa(models.TransientModel):
                     office_id = offices[0].id
                     vals['rea_office'] = office_id
 
-                rea_domain = [
-                    ('rea_code', '=', rea_nr),
-                    ('company_id', '=', partner_company_id),
-                    ('id', '!=', partner_id)
-                ]
-                if office_id:
-                    rea_domain.append(('rea_office', '=', office_id))
-                rea_partners = partner_model.search(rea_domain)
-                if rea_partners:
-                    rea_names = ", ".join(rea_partners.mapped('name'))
-                    p_name = partner_model.browse(partner_id).name
-                    self.log_inconsistency(
-                        _("Current invoice is from {} with REA Code"
-                          " {}. Yet it seems that partners {} have the same"
-                          " REA Code. This code should be unique; please fix"
-                          " it."
-                          .format(p_name, rea_nr, rea_names))
-                    )
-                else:
-                    vals['rea_code'] = REA.NumeroREA
-
+                vals['rea_code'] = REA.NumeroREA
                 vals['rea_capital'] = REA.CapitaleSociale or 0.0
                 vals['rea_member_type'] = REA.SocioUnico or False
                 vals['rea_liquidation_state'] = REA.StatoLiquidazione or False
