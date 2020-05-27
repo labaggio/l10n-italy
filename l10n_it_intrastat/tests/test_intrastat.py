@@ -33,6 +33,14 @@ class TestIntrastat(AccountingTestCase):
 
         self.tax22 = self.env.ref('l10n_it_intrastat.tax_22')
 
+        company = self.env.user.company_id
+        company.partner_id.vat = 'IT03339130126'
+        company.intrastat_custom_id = self.ref('l10n_it_intrastat.014100')
+        company.intrastat_purchase_transaction_nature_id = \
+            self.ref('l10n_it_intrastat.code_9')
+        company.intrastat_sale_transaction_nature_id = \
+            self.ref('l10n_it_intrastat.code_9')
+
     def test_invoice_totals(self):
         invoice = self.invoice_model.create({
             'partner_id': self.partner01.id,
